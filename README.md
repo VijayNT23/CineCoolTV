@@ -301,4 +301,4 @@ For issues and questions, please open an issue on GitHub.
 
 ---
 
-**Built with ❤️ using React, Spring Boot, and AI**
+**Built with ❤️ using React, Spring Boot**
