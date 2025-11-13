@@ -1,34 +1,39 @@
-# Multi-stage build for Spring Boot backend
+# =========================
+# 🏗️ Build Stage
+# =========================
 FROM eclipse-temurin:21-jdk-alpine AS build
-
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml
+# Copy Maven wrapper, config, and pom.xml
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Download dependencies
+# ✅ Fix permission issue before running mvnw
+RUN chmod +x mvnw
+
+# Download dependencies (faster incremental builds)
 RUN ./mvnw dependency:go-offline -B
 
-# Copy source code
+# Copy the rest of the source code
 COPY src src
 
-# Build the application
+# Build the Spring Boot application
 RUN ./mvnw clean package -DskipTests
 
-# Production stage
+# =========================
+# 🚀 Runtime Stage
+# =========================
 FROM eclipse-temurin:21-jre-alpine
-
 WORKDIR /app
 
-# Copy the JAR from build stage
+# Copy the JAR file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port
+# Expose backend port (Render auto-detects)
 EXPOSE 8080
 
-# Health check
+# Optional: health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
 
