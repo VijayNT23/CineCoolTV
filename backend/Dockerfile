@@ -4,19 +4,19 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Copy Maven wrapper, config, and pom.xml (FROM backend folder)
-COPY backend/mvnw .
-COPY backend/.mvn .mvn
-COPY backend/pom.xml .
+# Copy Maven wrapper, config, and pom.xml from backend folder (relative to Dockerfile)
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
 
 # Fix mvnw permissions
 RUN chmod +x mvnw
 
-# Download dependencies
+# Download dependencies before copying source code
 RUN ./mvnw dependency:go-offline -B
 
 # Copy backend src folder
-COPY backend/src ./src
+COPY src ./src
 
 # Build the Spring Boot JAR
 RUN ./mvnw clean package -DskipTests
