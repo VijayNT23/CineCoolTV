@@ -1,4 +1,4 @@
-package com.moviestracker.backend.model;
+package com.cinecooltv.backend.model;
 
 import jakarta.persistence.*;
 

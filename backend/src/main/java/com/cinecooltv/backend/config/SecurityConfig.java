@@ -1,4 +1,4 @@
-package com.moviestracker.backend.config;
+package com.cinecooltv.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

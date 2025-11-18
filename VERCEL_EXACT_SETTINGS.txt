@@ -1,0 +1,94 @@
+================================================================================
+                    VERCEL DEPLOYMENT - EXACT SETTINGS
+                         For: cinecooltv-tracker
+================================================================================
+
+STEP 1: GO TO VERCEL
+--------------------
+URL: https://vercel.com
+Action: Sign in with GitHub
+
+
+STEP 2: CREATE NEW PROJECT
+---------------------------
+Click: "Add New..." → "Project"
+Click: "Import Git Repository"
+
+
+STEP 3: SELECT REPOSITORY
+--------------------------
+Repository: VijayNT23/CineCoolTV
+Branch: main
+
+
+STEP 4: CONFIGURE PROJECT
+--------------------------
+Vercel Team: Vijay's projects (Hobby)
+Project Name: cinecooltv-tracker
+Framework Preset: Other
+Root Directory: ./ (leave as default)
+
+
+STEP 5: BUILD SETTINGS
+----------------------
+Build Command: cd frontend && npm install && npm run build
+Output Directory: frontend/build
+Install Command: npm install (leave as default)
+
+
+STEP 6: ENVIRONMENT VARIABLES
+------------------------------
+Click "Add Environment Variable" for each:
+
+Key: REACT_APP_FIREBASE_API_KEY
+Value: [YOUR FIREBASE API KEY]
+
+Key: REACT_APP_FIREBASE_AUTH_DOMAIN
+Value: [YOUR-PROJECT].firebaseapp.com
+
+Key: REACT_APP_FIREBASE_PROJECT_ID
+Value: [YOUR PROJECT ID]
+
+Key: REACT_APP_FIREBASE_STORAGE_BUCKET
+Value: [YOUR-PROJECT].appspot.com
+
+Key: REACT_APP_FIREBASE_MESSAGING_SENDER_ID
+Value: [YOUR SENDER ID]
+
+Key: REACT_APP_FIREBASE_APP_ID
+Value: [YOUR APP ID]
+
+Key: REACT_APP_FIREBASE_MEASUREMENT_ID
+Value: [YOUR MEASUREMENT ID]
+
+Key: REACT_APP_TMDB_API_KEY
+Value: [YOUR TMDB API KEY]
+
+Key: REACT_APP_API_URL
+Value: https://cinecooltv-tracker.onrender.com
+
+NOTE: You can also click "Add from .env" and paste all variables at once
+
+
+STEP 7: DEPLOY
+--------------
+Click: "Deploy"
+Wait: 2-3 minutes for build to complete
+
+
+STEP 8: GET YOUR URL
+--------------------
+Your Frontend URL: https://cinecooltv-tracker.vercel.app
+
+
+================================================================================
+                              IMPORTANT NOTES
+================================================================================
+
+1. Replace all [YOUR ...] placeholders with actual values
+2. Make sure REACT_APP_API_URL points to your Render backend URL
+3. After deployment, add this Vercel URL to:
+   - Render backend CORS settings
+   - Firebase authorized domains
+
+================================================================================

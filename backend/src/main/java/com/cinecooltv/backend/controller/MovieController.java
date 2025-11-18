@@ -1,4 +1,4 @@
-package com.moviestracker.backend.controller;
+package com.cinecooltv.backend.controller;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;

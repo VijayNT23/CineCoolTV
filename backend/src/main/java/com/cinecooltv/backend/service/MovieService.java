@@ -1,7 +1,7 @@
-package com.moviestracker.backend.service;
+package com.cinecooltv.backend.service;
 
-import com.moviestracker.backend.model.Movie;
-import com.moviestracker.backend.repository.MovieRepository;
+import com.cinecooltv.backend.model.Movie;
+import com.cinecooltv.backend.repository.MovieRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 

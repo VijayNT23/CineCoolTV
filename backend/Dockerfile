@@ -4,21 +4,21 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Copy Maven wrapper, config, and pom.xml
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Copy Maven wrapper, config, and pom.xml (FROM backend folder)
+COPY backend/mvnw .
+COPY backend/.mvn .mvn
+COPY backend/pom.xml .
 
-# ✅ Fix permission issue before running mvnw
+# Fix mvnw permissions
 RUN chmod +x mvnw
 
-# Download dependencies (faster incremental builds)
+# Download dependencies
 RUN ./mvnw dependency:go-offline -B
 
-# Copy the rest of the source code
-COPY src src
+# Copy backend src folder
+COPY backend/src ./src
 
-# Build the Spring Boot application
+# Build the Spring Boot JAR
 RUN ./mvnw clean package -DskipTests
 
 # =========================
@@ -27,15 +27,9 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copy the JAR file from the build stage
+# Copy the JAR from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose backend port (Render auto-detects)
 EXPOSE 8080
 
-# Optional: health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
-
-# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,115 @@
+================================================================================
+                    RENDER DEPLOYMENT - EXACT SETTINGS
+                         For: cinecooltv-tracker
+================================================================================
+
+STEP 1: GO TO RENDER
+--------------------
+URL: https://render.com
+Action: Sign in with GitHub
+
+
+STEP 2: CREATE NEW WEB SERVICE
+-------------------------------
+Click: "New +" → "Web Service"
+Action: Connect GitHub account (if not already connected)
+
+
+STEP 3: SELECT REPOSITORY
+--------------------------
+Repository: VijayNT23/CineCoolTV
+Click: "Connect"
+
+
+STEP 4: BASIC CONFIGURATION
+----------------------------
+Name: cinecooltv-tracker
+Language: Docker
+Branch: main
+Region: Oregon (US West)
+Root Directory: backend
+
+
+STEP 5: INSTANCE TYPE
+----------------------
+Instance Type: Free
+  - $0/month
+  - 512 MB RAM
+  - 0.1 CPU
+  - Sleeps after 15 min inactivity
+
+(Optional: Upgrade to Starter $7/month for always-on service)
+
+
+STEP 6: ADVANCED SETTINGS
+--------------------------
+Click "Advanced" to expand
+
+Health Check Path: /healthz
+Registry Credential: No credential
+Docker Build Context Directory: backend
+Dockerfile Path: backend/Dockerfile
+Docker Command: (leave empty)
+Pre-Deploy Command: (leave empty)
+Auto-Deploy: Yes (On Commit)
+
+
+STEP 7: ENVIRONMENT VARIABLES
+------------------------------
+Click "Add Environment Variable" for each:
+
+Key: GEMINI_API_KEY
+Value: [YOUR GEMINI API KEY]
+
+Key: TMDB_API_KEY
+Value: [YOUR TMDB API KEY]
+
+Key: AI_PROVIDER
+Value: gemini
+
+Key: SERVER_PORT
+Value: 8080
+
+Key: ALLOWED_ORIGINS
+Value: https://cinecooltv-tracker.vercel.app,http://localhost:3000
+
+NOTE: You can also click "Add from .env" and paste all variables at once
+
+
+STEP 8: BUILD FILTERS (OPTIONAL)
+---------------------------------
+Included Paths: (leave empty)
+Ignored Paths: (leave empty)
+
+
+STEP 9: DEPLOY
+--------------
+Click: "Create Web Service"
+Wait: 5-10 minutes for build to complete
+
+
+STEP 10: GET YOUR URL
+---------------------
+Your Backend URL: https://cinecooltv-tracker.onrender.com
+
+
+================================================================================
+                              IMPORTANT NOTES
+================================================================================
+
+1. Replace all [YOUR ...] placeholders with actual values
+2. Make sure ALLOWED_ORIGINS includes your Vercel frontend URL
+3. Free tier instances sleep after 15 minutes of inactivity
+   - First request after sleep takes 30-60 seconds to wake up
+4. Check logs in Render dashboard if deployment fails
+5. Health check endpoint /healthz will be used to monitor service
+
+================================================================================
+                           AFTER DEPLOYMENT
+================================================================================
+
+1. Copy your backend URL: https://cinecooltv-tracker.onrender.com
+2. Update Vercel environment variable REACT_APP_API_URL with this URL
+3. Redeploy Vercel frontend to apply changes
+
+================================================================================
