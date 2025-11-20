@@ -31,7 +31,7 @@ const requests = {
     crimeSeries: `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=80`,
     realitySeries: `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_genres=10764`,
 
-    // 🍜 ANIME (Using TMDB’s “tv” + Japanese language filter)
+    // 🍜 ANIME (Using TMDB's "tv" + Japanese language filter)
     animeTrending: `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ja&sort_by=popularity.desc`,
     animeTopRated: `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ja&sort_by=vote_average.desc&vote_count.gte=200`,
     animeAction: `https://api.themoviedb.org/3/discover/tv?api_key=${API_KEY}&with_original_language=ja&with_genres=16,10759`,
