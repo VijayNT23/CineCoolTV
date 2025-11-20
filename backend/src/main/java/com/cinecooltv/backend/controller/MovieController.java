@@ -1,5 +1,6 @@
 package com.cinecooltv.backend.controller;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.json.*;
@@ -7,17 +8,24 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/movies")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class MovieController {
 
-    private static final String TMDB_API_KEY = "cda399e3308f58b8d5be3efe82410e7a";
+    @Value("${TMDB_API_KEY}")
+    private String tmdbApiKey;
 
     @GetMapping("/search")
     public List<Map<String, Object>> searchMovies(@RequestParam String query) {
         List<Map<String, Object>> results = new ArrayList<>();
 
+        if (query == null || query.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
         try {
-            String url = "https://api.themoviedb.org/3/search/multi?api_key=" + TMDB_API_KEY + "&query=" + query;
+            String encodedQuery = java.net.URLEncoder.encode(query.trim(), "UTF-8");
+            String url = "https://api.themoviedb.org/3/search/multi?api_key=" + tmdbApiKey + "&query=" + encodedQuery;
+
             RestTemplate restTemplate = new RestTemplate();
             String response = restTemplate.getForObject(url, String.class);
 
@@ -42,7 +50,7 @@ public class MovieController {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error searching movies: " + e.getMessage());
         }
 
         return results;

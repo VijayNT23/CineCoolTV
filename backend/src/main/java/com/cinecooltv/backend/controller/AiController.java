@@ -5,11 +5,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
 import org.json.*;
-
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/ai")
+@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class AiController {
 
     @Value("${OPENAI_API_KEY:}")
@@ -40,13 +40,13 @@ public class AiController {
         Map<String, Object> result = new HashMap<>();
         try {
             // Determine which AI provider to use
-            boolean useGemini = (aiProvider.equalsIgnoreCase("gemini") && 
-                               geminiKey != null && !geminiKey.isEmpty() && 
-                               !geminiKey.equals("your-gemini-key-here"));
-            boolean useOpenAI = (aiProvider.equalsIgnoreCase("openai") && 
-                               openAiKey != null && !openAiKey.isEmpty() && 
-                               !openAiKey.equals("your-openai-key-here"));
-            
+            boolean useGemini = (aiProvider.equalsIgnoreCase("gemini") &&
+                    geminiKey != null && !geminiKey.isEmpty() &&
+                    !geminiKey.equals("your-gemini-key-here"));
+            boolean useOpenAI = (aiProvider.equalsIgnoreCase("openai") &&
+                    openAiKey != null && !openAiKey.isEmpty() &&
+                    !openAiKey.equals("your-openai-key-here"));
+
             // Fallback: try Gemini first, then OpenAI
             if (!useGemini && !useOpenAI) {
                 if (geminiKey != null && !geminiKey.isEmpty() && !geminiKey.equals("your-gemini-key-here")) {
@@ -68,14 +68,14 @@ public class AiController {
             } else {
                 aiResponse = callGPT(question);
             }
-            
+
             List<Map<String, Object>> movies = extractMoviesFromText(aiResponse);
             String formatted = formatResponse(aiResponse, movies);
             result.put("answer", formatted);
             result.put("movies", movies);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("AI Service Error: " + e.getMessage());
             String errorMsg = "⚠️ Error: " + e.getMessage();
             errorMsg += "\n\nDebug Info:";
             errorMsg += "\n• Gemini Key: " + (geminiKey != null && !geminiKey.isEmpty() && !geminiKey.equals("your-gemini-key-here") ? "✓ Set" : "✗ Not set");
@@ -148,11 +148,11 @@ public class AiController {
         }
 
         JSONObject json = new JSONObject(response.getBody());
-        
+
         if (!json.has("candidates") || json.getJSONArray("candidates").length() == 0) {
             throw new RuntimeException("Gemini API returned no candidates. Response: " + json.toString());
         }
-        
+
         return json.getJSONArray("candidates")
                 .getJSONObject(0)
                 .getJSONObject("content")
@@ -170,7 +170,7 @@ public class AiController {
 
         JSONObject body = new JSONObject();
         body.put("model", "gpt-4o-mini");
-        
+
         // Enhanced cinema-focused system prompt with formatting instructions
         String systemPrompt = "You are CineCoolAI, an expert cinema assistant specialized in:\n" +
                 "- Movie and series analysis\n" +
@@ -203,7 +203,7 @@ public class AiController {
                 "Description text here...\n" +
                 "---\n" +
                 "Be concise but thorough, and always relate your answers to cinematic elements.";
-        
+
         body.put("messages", new JSONArray()
                 .put(new JSONObject().put("role", "system").put("content", systemPrompt))
                 .put(new JSONObject().put("role", "user").put("content", question)));
@@ -260,7 +260,7 @@ public class AiController {
     private String formatResponse(String text, List<Map<String, Object>> movies) {
         text = text.replaceAll("(?m)^\\s*\\d+\\.\\s*", "• ");
         text = text.replaceAll("(?m)^\\s*-\\s*", "• ");
-        StringBuilder sb = new StringBuilder("🎬 Here’s what I found:\n\n").append(text.trim());
+        StringBuilder sb = new StringBuilder("🎬 Here's what I found:\n\n").append(text.trim());
 
         if (!movies.isEmpty()) {
             sb.append("\n\n🎞 Related Titles:\n");
@@ -273,4 +273,3 @@ public class AiController {
         return sb.toString();
     }
 }
-
