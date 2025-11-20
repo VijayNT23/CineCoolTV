@@ -1,34 +1,36 @@
-# =========================
-# 🏗️ Build Stage
-# =========================
-FROM eclipse-temurin:21-jdk-alpine AS build
+# Use Java 21
+FROM eclipse-temurin:21-jdk-alpine as build
+
 WORKDIR /app
 
-# Copy Maven wrapper, config, and pom.xml from backend folder (relative to Dockerfile)
+# Copy Maven wrapper and pom.xml
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Fix mvnw permissions
+# Make mvnw executable
 RUN chmod +x mvnw
 
-# Download dependencies before copying source code
+# Download dependencies
 RUN ./mvnw dependency:go-offline -B
 
-# Copy backend src folder
+# Copy source code
 COPY src ./src
 
-# Build the Spring Boot JAR
+# Build the application
 RUN ./mvnw clean package -DskipTests
 
-# =========================
-# 🚀 Runtime Stage
-# =========================
+# Runtime stage
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
 
-# Copy the JAR from the build stage
+# Copy jar from build stage
 COPY --from=build /app/target/*.jar app.jar
+
+# Create a non-root user
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring
 
 EXPOSE 8080
 

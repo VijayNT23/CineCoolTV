@@ -1,0 +1,17 @@
+# backend/render.yaml - CREATE THIS FILE
+services:
+  - type: web
+    name: cinecooltv-backend
+    env: java
+    plan: free
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+    envVars:
+      - key: JAVA_VERSION
+        value: 21
+
+databases:
+  - name: cinecooltv-db
+    plan: free
+    databaseName: cinecooltv
+    user: cinecooltv_user
