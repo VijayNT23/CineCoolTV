@@ -9,7 +9,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
+//@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class AiController {
 
     @Value("${GEMINI_API_KEY:}")

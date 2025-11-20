@@ -8,7 +8,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/movies")
-@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
+//@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class MovieController {
 
     @Value("${TMDB_API_KEY}")
