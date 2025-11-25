@@ -19,7 +19,8 @@ const IMG_BASE = "https://image.tmdb.org/t/p/original";
 const DetailsPage = () => {
     const { type: typeFromRoute, id } = useParams();
     const navigate = useNavigate();
-    const { isDark } = useTheme();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
 
     // Keep anime as separate type, only convert "series" to "tv" for API calls
     const type = !typeFromRoute ? "movie" : typeFromRoute;
@@ -68,7 +69,6 @@ const DetailsPage = () => {
                     );
                     if (mounted) {
                         setRecommendations(recRes.data.results || []);
-                        console.log("📋 Recommendations loaded:", recRes.data.results?.length || 0);
                     }
                 } catch (recError) {
                     console.error("Error fetching recommendations:", recError);
@@ -152,7 +152,7 @@ const DetailsPage = () => {
         return `${mins}m`;
     };
 
-    // FIXED: Handle status change with toggle behavior
+    // Handle status change with toggle behavior
     const handleStatusChange = async (newStatus) => {
         const libraryItem = getLibraryItem(Number(id), type);
 
@@ -300,105 +300,68 @@ const DetailsPage = () => {
     const totalDuration = calculateTotalDuration();
 
     return (
-        <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-            {/* Cinematic Background with Enhanced Overlay */}
-            <div
-                className="absolute inset-0 bg-cover bg-center z-0"
-                style={{
-                    backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${details.backdrop_path ? `${IMG_BASE}${details.backdrop_path}` : poster})`,
-                }}
-            >
-                <div className={`absolute inset-0 ${
-                    isDark
-                        ? "bg-gradient-to-b from-black/90 via-black/80 to-black/95"
-                        : "bg-gradient-to-b from-white/95 via-white/90 to-white/98"
-                }`}></div>
-            </div>
-
-            <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
-                {/* Back Button with Cinematic Style */}
+        <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-white'} pb-8`}>
+            {/* Enhanced Back Button */}
+            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-4">
                 <button
                     onClick={() => window.history.back()}
-                    className={`mb-8 px-6 py-3 rounded-xl transition-all duration-300 font-bold tracking-wide shadow-2xl backdrop-blur-sm ${
+                    className={`mb-4 px-4 py-2 text-sm rounded-lg transition-all duration-300 font-semibold shadow-lg backdrop-blur-sm ${
                         isDark
                             ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                             : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                     }`}
                 >
-                    🎬 ← Back to Browse
+                    ← Back
                 </button>
+            </div>
 
-                <div className="flex flex-col md:flex-row gap-10 items-start">
-                    {/* Poster + Actions - Enhanced */}
-                    <div className="w-full md:w-96 flex-shrink-0">
+            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6">
+                {/* Mobile-first flex column */}
+                <div className="flex flex-col lg:flex-row gap-6 items-start">
+                    {/* Poster Section - Full width on mobile */}
+                    <div className="w-full lg:w-96 flex-shrink-0">
                         <img
                             src={poster}
                             alt={details.title || details.name}
-                            className="rounded-3xl shadow-2xl w-full object-cover transform hover:scale-105 transition-transform duration-500 border-4 border-white/20"
+                            className="rounded-2xl shadow-xl w-full max-w-xs mx-auto lg:max-w-none object-cover transform hover:scale-105 transition-transform duration-500 border-4 border-white/20"
                         />
 
-                        {/* Duration Information - Cinematic */}
-                        <div className={`mt-6 rounded-2xl p-6 shadow-2xl backdrop-blur-sm border ${
+                        {/* Duration Info - Compact on mobile */}
+                        <div className={`mt-4 rounded-xl p-4 shadow-lg backdrop-blur-sm border ${
                             isDark
                                 ? "bg-white/10 border-white/20"
                                 : "bg-black/10 border-gray-300/50"
                         }`}>
-                            <h3 className={`font-black text-xl mb-4 tracking-wider ${
-                                isDark
-                                    ? "text-white drop-shadow-lg"
-                                    : "text-gray-900"
-                            }`}>🎥 DURATION INFO</h3>
+                            <h3 className={`font-bold text-lg mb-3 text-center lg:text-left ${
+                                isDark ? "text-white" : "text-gray-900"
+                            }`}>🎥 DURATION</h3>
                             {type === "movie" ? (
-                                <div className="space-y-3">
-                                    <p className={`font-bold text-lg ${
-                                        isDark ? "text-white" : "text-gray-800"
-                                    }`}>
-                                        <span className={`font-semibold ${
-                                            isDark ? "text-gray-300" : "text-gray-600"
-                                        }`}>Movie Duration:</span><br/>
-                                        {formatDuration(details.runtime || 120)}
-                                    </p>
-                                </div>
+                                <p className={`text-center lg:text-left font-semibold ${
+                                    isDark ? "text-white" : "text-gray-800"
+                                }`}>
+                                    {formatDuration(details.runtime || 120)}
+                                </p>
                             ) : (
-                                <div className="space-y-3">
-                                    <p className={`font-bold text-lg ${
+                                <div className="space-y-2 text-sm">
+                                    <p className={`text-center lg:text-left font-semibold ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
-                                            isDark ? "text-gray-300" : "text-gray-600"
-                                        }`}>Episode Duration:</span><br/>
-                                        {formatDuration(episodeRuntime)}
+                                        Episode: {formatDuration(episodeRuntime)}
                                     </p>
-                                    <p className={`font-bold text-lg ${
+                                    <p className={`text-center lg:text-left font-semibold ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
-                                            isDark ? "text-gray-300" : "text-gray-600"
-                                        }`}>Total Episodes:</span><br/>
-                                        {totalEpisodes}
-                                    </p>
-                                    <p className={`font-bold text-lg ${
-                                        isDark ? "text-white" : "text-gray-800"
-                                    }`}>
-                                        <span className={`font-semibold ${
-                                            isDark ? "text-gray-300" : "text-gray-600"
-                                        }`}>Total Series Duration:</span><br/>
-                                        {formatDuration(totalDuration)}
-                                    </p>
-                                    <p className={`text-sm font-semibold mt-2 ${
-                                        isDark ? "text-gray-400" : "text-gray-600"
-                                    }`}>
-                                        ({Math.floor(totalDuration / 60)} hours {totalDuration % 60} minutes)
+                                        Total: {totalEpisodes} episodes
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Action Buttons - Cinematic */}
-                        <div className="mt-6 flex flex-col gap-4">
+                        {/* Action Buttons - Stacked on mobile */}
+                        <div className="mt-4 flex flex-col gap-3">
                             <button
                                 onClick={handleAddToLibrary}
-                                className={`px-6 py-4 rounded-2xl font-black text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
+                                className={`px-4 py-3 text-sm rounded-xl font-bold transition-all duration-300 shadow-lg ${
                                     isInLibrary(Number(id), type)
                                         ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white"
                                         : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white"
@@ -410,7 +373,7 @@ const DetailsPage = () => {
                             </button>
                             <button
                                 onClick={handleToggleFav}
-                                className={`px-6 py-4 rounded-2xl font-black text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
+                                className={`px-4 py-3 text-sm rounded-xl font-bold transition-all duration-300 shadow-lg ${
                                     fav
                                         ? "bg-gradient-to-r from-pink-600 to-red-500 hover:from-pink-500 hover:to-red-400 text-white"
                                         : isDark
@@ -418,24 +381,24 @@ const DetailsPage = () => {
                                             : "bg-gradient-to-r from-gray-300 to-gray-200 hover:from-gray-200 hover:to-gray-100 text-gray-900"
                                 }`}
                             >
-                                {fav ? "❤️ FAVORITED" : "⭐ ADD TO FAVORITES"}
+                                {fav ? "❤️ FAVORITED" : "⭐ FAVORITE"}
                             </button>
                         </div>
 
                         {status && (
-                            <div className={`mt-4 p-4 rounded-2xl shadow-xl backdrop-blur-sm border ${
+                            <div className={`mt-4 p-4 rounded-xl shadow-lg backdrop-blur-sm border ${
                                 isDark
                                     ? "bg-white/10 border-white/20"
                                     : "bg-black/10 border-gray-300/50"
                             }`}>
-                                <p className={`text-lg font-bold tracking-wide ${
+                                <p className={`text-sm font-bold tracking-wide ${
                                     isDark ? "text-white" : "text-gray-800"
                                 }`}>
-                                    📊 CURRENT STATUS: <span className={`font-black text-xl ${
+                                    📊 CURRENT STATUS: <span className={`font-black text-base ${
                                     isDark ? "text-white" : "text-gray-900"
                                 }`}>{status.toUpperCase()}</span>
                                     {isRewatching && (
-                                        <span className="ml-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1 rounded-full text-sm font-black tracking-wide">
+                                        <span className="ml-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-2 py-1 rounded-full text-xs font-black tracking-wide">
                                             🔁 REWATCHING
                                         </span>
                                     )}
@@ -444,126 +407,102 @@ const DetailsPage = () => {
                         )}
                     </div>
 
-                    {/* Main Details - Cinematic */}
-                    <div className="flex-1">
-                        {/* Title with Cinematic Impact */}
-                        <h1 className={`text-5xl font-black mb-4 tracking-tight leading-tight drop-shadow-2xl ${
-                            isDark
-                                ? "text-white bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
-                                : "text-gray-900 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
+                    {/* Main Content - Full width on mobile */}
+                    <div className="flex-1 w-full">
+                        {/* Title - Responsive font size */}
+                        <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-center lg:text-left leading-tight ${
+                            isDark ? "text-white" : "text-gray-900"
                         }`}>
                             {details.title || details.name}
                         </h1>
 
-                        {/* Metadata - Bold and Clean */}
-                        <div className={`mb-6 flex flex-wrap gap-6 text-lg font-bold tracking-wide ${
+                        {/* Metadata - Wrap properly */}
+                        <div className={`mb-6 flex flex-wrap justify-center lg:justify-start gap-2 text-sm font-semibold ${
                             isDark ? "text-gray-200" : "text-gray-700"
                         }`}>
                             {(details.release_date || details.first_air_date) && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
+                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-lg">
                                     🗓️ {(details.release_date || details.first_air_date).slice(0, 10)}
                                 </span>
                             )}
-                            {details.runtime && type === "movie" && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    ⏱️ {formatDuration(details.runtime)}
-                                </span>
-                            )}
                             {details.vote_average !== undefined && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
+                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-lg">
                                     ⭐ {details.vote_average.toFixed(1)}/10
                                 </span>
                             )}
-                            {details.number_of_seasons && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    📺 {details.number_of_seasons} SEASONS
+                            {details.runtime && type === "movie" && (
+                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-lg">
+                                    ⏱️ {formatDuration(details.runtime)}
                                 </span>
                             )}
-                            {details.number_of_episodes && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    🎬 {details.number_of_episodes} EPISODES
+                            {details.number_of_seasons && (
+                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-lg">
+                                    📺 {details.number_of_seasons} SEASONS
                                 </span>
                             )}
                         </div>
 
-                        {/* Overview - Enhanced Readability */}
-                        <p className={`text-xl leading-relaxed mb-8 max-w-4xl font-semibold tracking-wide ${
-                            isDark
-                                ? "text-gray-100 drop-shadow-lg"
-                                : "text-gray-800"
+                        {/* Overview - Better mobile spacing */}
+                        <p className={`text-base leading-relaxed mb-6 text-center lg:text-left ${
+                            isDark ? "text-gray-100" : "text-gray-800"
                         }`}>
                             {details.overview || "No summary available."}
                         </p>
 
-                        {/* Genres Display - Cinematic */}
+                        {/* Genres - Center on mobile */}
                         {details.genres && details.genres.length > 0 && (
-                            <div className="flex flex-wrap gap-3 mb-8">
+                            <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6">
                                 {details.genres.map(genre => (
                                     <span
                                         key={genre.id}
-                                        className="px-5 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-lg font-black tracking-wide text-white shadow-2xl transform hover:scale-105 transition-transform"
+                                        className="px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-sm font-bold text-white"
                                     >
-                                        {genre.name.toUpperCase()}
+                                        {genre.name}
                                     </span>
                                 ))}
                             </div>
                         )}
 
-                        {/* Status Buttons - Premium */}
-                        <div className="mb-10">
-                            <h3 className={`text-2xl font-black mb-6 tracking-wider ${
-                                isDark
-                                    ? "text-white drop-shadow-lg"
-                                    : "text-gray-900"
+                        {/* Status Buttons - Grid on mobile */}
+                        <div className="mb-8">
+                            <h3 className={`text-lg font-bold mb-4 text-center lg:text-left ${
+                                isDark ? "text-white" : "text-gray-900"
                             }`}>🎯 UPDATE STATUS</h3>
-                            <div className="flex flex-wrap gap-3">
-                                {[
-                                    "Watchlist",
-                                    "Watching",
-                                    "Considering",
-                                    "Completed",
-                                    "Dropped",
-                                ].map((st) => (
+                            <div className="grid grid-cols-2 sm:flex flex-wrap gap-2">
+                                {["Watchlist", "Watching", "Considering", "Completed", "Dropped"].map((st) => (
                                     <button
                                         key={st}
                                         onClick={() => handleStatusChange(st)}
-                                        className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
+                                        className={`px-3 py-2 text-xs sm:text-sm rounded-lg font-bold transition-all ${
                                             status === st
-                                                ? "bg-gradient-to-r from-red-700 to-red-600 text-white shadow-lg"
+                                                ? "bg-gradient-to-r from-red-700 to-red-600 text-white"
                                                 : isDark
-                                                    ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                                                    : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
+                                                    ? "bg-white/10 hover:bg-white/20 text-white"
+                                                    : "bg-black/10 hover:bg-black/20 text-gray-900"
                                         }`}
                                     >
-                                        {status === st ? `✅ ${st.toUpperCase()}` : st.toUpperCase()}
+                                        {status === st ? `✅ ${st}` : st}
                                     </button>
                                 ))}
-
-                                {/* Rewatch Button */}
+                                {/* Rewatch Button - Full width on mobile */}
                                 <button
                                     onClick={() => handleStatusChange("Rewatching")}
-                                    className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
+                                    className={`col-span-2 px-3 py-2 text-xs sm:text-sm rounded-lg font-bold transition-all ${
                                         isRewatching
-                                            ? "bg-gradient-to-r from-orange-700 to-yellow-600 text-white shadow-lg"
+                                            ? "bg-gradient-to-r from-orange-700 to-yellow-600 text-white"
                                             : isDark
-                                                ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                                                : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
+                                                ? "bg-white/10 hover:bg-white/20 text-white"
+                                                : "bg-black/10 hover:bg-black/20 text-gray-900"
                                     }`}
                                 >
-                                    {isRewatching ? "✅ REWATCHING" : "🔁 MARK REWATCHING"}
+                                    {isRewatching ? "✅ REWATCHING" : "🔁 REWATCH"}
                                 </button>
                             </div>
-
-                            {isRewatching && (
-                                <p className="text-lg font-bold text-orange-400 mt-4 tracking-wide drop-shadow-lg">
-                                    ✅ This show is marked as completed and you're currently rewatching it!
-                                </p>
-                            )}
                         </div>
 
-                        {/* Tabs - Cinematic */}
-                        <div className="mt-10">
-                            <div className={`flex gap-8 border-b-2 pb-4 ${
+                        {/* Tabs - Scrollable on mobile */}
+                        <div className="mt-8">
+                            <div className={`flex gap-4 pb-4 overflow-x-auto scrollbar-hide ${
                                 isDark ? "border-white/30" : "border-gray-400/50"
                             }`}>
                                 {["trailer", "cast", ...(type === "tv" ? ["episodes"] : []), "recommendations"].map(
@@ -571,32 +510,35 @@ const DetailsPage = () => {
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab)}
-                                            className={`pb-2 capitalize text-lg font-black tracking-wide transition-all duration-300 ${
+                                            className={`whitespace-nowrap pb-2 capitalize text-sm font-bold transition-all ${
                                                 activeTab === tab
-                                                    ? "border-b-4 border-red-500 text-red-500 transform scale-110"
+                                                    ? "border-b-2 border-red-500 text-red-500"
                                                     : isDark
-                                                        ? "text-gray-400 hover:text-white hover:scale-105"
-                                                        : "text-gray-600 hover:text-gray-900 hover:scale-105"
+                                                        ? "text-gray-400 hover:text-white"
+                                                        : "text-gray-600 hover:text-gray-900"
                                             }`}
                                         >
-                                            {tab.toUpperCase()}
+                                            {tab}
                                         </button>
                                     )
                                 )}
                             </div>
 
-                            <div className="mt-8">
+                            {/* Tab Content */}
+                            <div className="mt-6">
                                 {activeTab === "trailer" && (
-                                    <div className="rounded-3xl overflow-hidden shadow-2xl">
+                                    <div className="rounded-xl overflow-hidden">
                                         {trailer ? (
-                                            <iframe
-                                                className="w-full h-96 rounded-3xl"
-                                                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=0&rel=0&modestbranding=1`}
-                                                title="Trailer"
-                                                allowFullScreen
-                                            />
+                                            <div className="relative aspect-video">
+                                                <iframe
+                                                    className="w-full h-full rounded-xl"
+                                                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=0&rel=0&modestbranding=1`}
+                                                    title="Trailer"
+                                                    allowFullScreen
+                                                />
+                                            </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-8 text-base ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🎥 No trailer available</p>
                                         )}
@@ -604,28 +546,22 @@ const DetailsPage = () => {
                                 )}
 
                                 {activeTab === "cast" && (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                                         {cast.slice(0, 12).map((c) => (
-                                            <div
-                                                key={c.cast_id || c.credit_id || c.id}
-                                                className="text-center group"
-                                            >
+                                            <div key={c.cast_id || c.credit_id || c.id} className="text-center">
                                                 <img
                                                     src={
                                                         c.profile_path
                                                             ? `${IMG_BASE}${c.profile_path}`
-                                                            : "https://via.placeholder.com/200x300?text=No+Image"
+                                                            : "https://via.placeholder.com/100x150?text=No+Image"
                                                     }
                                                     alt={c.name}
-                                                    className="w-36 h-48 object-cover rounded-2xl mx-auto mb-3 group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
-                                                    onError={(e) => {
-                                                        e.target.src = "https://via.placeholder.com/200x300?text=No+Image";
-                                                    }}
+                                                    className="w-20 h-24 sm:w-24 sm:h-32 object-cover rounded-lg mx-auto mb-2"
                                                 />
-                                                <p className={`font-black text-sm tracking-wide ${
+                                                <p className={`text-xs font-semibold line-clamp-2 ${
                                                     isDark ? "text-white" : "text-gray-900"
                                                 }`}>{c.name}</p>
-                                                <p className={`text-xs font-bold mt-1 ${
+                                                <p className={`text-xs mt-1 line-clamp-2 ${
                                                     isDark ? "text-gray-400" : "text-gray-600"
                                                 }`}>{c.character}</p>
                                             </div>
@@ -636,7 +572,7 @@ const DetailsPage = () => {
                                 {activeTab === "episodes" && type === "tv" && (
                                     <div>
                                         <div className="mb-6 flex items-center gap-4">
-                                            <label className={`font-black text-xl tracking-wide ${
+                                            <label className={`font-bold text-lg tracking-wide ${
                                                 isDark ? "text-white" : "text-gray-900"
                                             }`}>📺 SEASON:</label>
                                             <select
@@ -662,31 +598,31 @@ const DetailsPage = () => {
                                         </div>
 
                                         {episodes.length > 0 ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-96 overflow-y-auto">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                                                 {episodes.map((ep) => (
                                                     <div
                                                         key={ep.id}
-                                                        className={`p-6 rounded-2xl shadow-2xl backdrop-blur-sm border transform hover:scale-105 transition-all duration-300 ${
+                                                        className={`p-4 rounded-xl shadow-lg backdrop-blur-sm border transform hover:scale-105 transition-all duration-300 ${
                                                             isDark
                                                                 ? "bg-white/10 hover:bg-white/15 border-white/20"
                                                                 : "bg-black/10 hover:bg-black/15 border-gray-300/50"
                                                         }`}
                                                     >
-                                                        <div className="flex items-center gap-6">
+                                                        <div className="flex items-center gap-4">
                                                             {ep.still_path && (
                                                                 <img
                                                                     src={`${IMG_BASE}${ep.still_path}`}
                                                                     alt={ep.name}
-                                                                    className="w-32 h-20 object-cover rounded-xl shadow-lg"
+                                                                    className="w-24 h-16 object-cover rounded-lg shadow-lg"
                                                                 />
                                                             )}
                                                             <div className="flex-1">
-                                                                <h3 className={`font-black text-lg tracking-wide ${
+                                                                <h3 className={`font-bold text-sm tracking-wide ${
                                                                     isDark ? "text-white" : "text-gray-900"
                                                                 }`}>
                                                                     S{selectedSeason}E{ep.episode_number}: {ep.name}
                                                                 </h3>
-                                                                <p className={`text-sm font-semibold mt-2 line-clamp-2 ${
+                                                                <p className={`text-xs font-semibold mt-2 line-clamp-2 ${
                                                                     isDark ? "text-gray-300" : "text-gray-600"
                                                                 }`}>
                                                                     {ep.overview || "No description available."}
@@ -704,7 +640,7 @@ const DetailsPage = () => {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-8 text-base ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🎬 No episodes found</p>
                                         )}
@@ -714,11 +650,11 @@ const DetailsPage = () => {
                                 {activeTab === "recommendations" && (
                                     <div>
                                         {recommendationsLoading ? (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-8 text-base ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🔄 Loading recommendations...</p>
                                         ) : recommendations.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                                 {recommendations.map((rec) => (
                                                     <div
                                                         key={rec.id}
@@ -739,12 +675,12 @@ const DetailsPage = () => {
                                                                     : "https://via.placeholder.com/300x450?text=No+Image"
                                                             }
                                                             alt={rec.title || rec.name}
-                                                            className="rounded-2xl w-full group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
+                                                            className="rounded-xl w-full group-hover:scale-110 transition-transform duration-300 shadow-lg border-2 border-white/20"
                                                             onError={(e) => {
                                                                 e.target.src = "https://via.placeholder.com/300x450?text=No+Image";
                                                             }}
                                                         />
-                                                        <p className={`text-sm font-black mt-3 tracking-wide group-hover:text-red-400 transition-colors ${
+                                                        <p className={`text-xs font-bold mt-2 tracking-wide group-hover:text-red-400 transition-colors ${
                                                             isDark ? "text-white" : "text-gray-900"
                                                         }`}>
                                                             {rec.title || rec.name}
@@ -753,7 +689,7 @@ const DetailsPage = () => {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-8 text-base ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🎭 No recommendations available for this title</p>
                                         )}

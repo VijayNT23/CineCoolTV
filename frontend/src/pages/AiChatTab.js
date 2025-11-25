@@ -1,21 +1,19 @@
 // src/pages/AiChatTab.js
 import React, { useState, useRef, useEffect } from "react";
 import {
-    Send, Bot, User, Sparkles, Loader2, Film, Zap, Lightbulb,
+    Send, Bot, User, Sparkles, Loader2, Film, Zap,
     TrendingUp, Heart, Search, MessageCircle, RefreshCw, History,
     Trash2, Plus, Copy, Check, Edit, Download, Mic, MicOff,
-    ThumbsUp, Search as SearchIcon, X, Save, Clock, Star
+    ThumbsUp, Search as SearchIcon, X, Save, Clock, Star,
+    Menu, X as CloseIcon
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
-// Base URL for your backend - Updated to PORT 8080
+// Base URL for your backend
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
-
-// Log the API URL being used (for debugging)
-console.log("🔧 API Base URL configured:", API_BASE_URL);
 
 export default function AiChatTab() {
     const [question, setQuestion] = useState("");
@@ -24,6 +22,7 @@ export default function AiChatTab() {
     const [connectionStatus, setConnectionStatus] = useState("checking");
     const [showHistory, setShowHistory] = useState(false);
     const [showLiked, setShowLiked] = useState(false);
+    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
     const [chatHistory, setChatHistory] = useState([]);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
@@ -49,29 +48,6 @@ export default function AiChatTab() {
         "Psychological thriller recommendations",
         "Is Game of Thrones worth watching?",
         "Compare Marvel and DC movies"
-    ];
-
-    const proTips = [
-        {
-            icon: <Search className="w-4 h-4" />,
-            title: "Be Specific",
-            description: "Mention character names, specific seasons, or particular aspects you want analyzed"
-        },
-        {
-            icon: <TrendingUp className="w-4 h-4" />,
-            title: "Compare & Contrast",
-            description: "Ask to compare characters, shows, or genres for deeper insights"
-        },
-        {
-            icon: <Heart className="w-4 h-4" />,
-            title: "Character Focus",
-            description: "I specialize in character psychology and development arcs"
-        },
-        {
-            icon: <MessageCircle className="w-4 h-4" />,
-            title: "Follow-up Questions",
-            description: "Ask follow-ups to dive deeper into any analysis"
-        }
     ];
 
     // Initialize speech recognition
@@ -109,39 +85,11 @@ export default function AiChatTab() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [chat]);
 
-    // Load chat history and liked messages when user logs in or component mounts
-    useEffect(() => {
-        if (currentUser) {
-            console.log("👤 User logged in, loading data...");
-            loadChatHistory();
-            loadLikedMessages();
-        } else {
-            console.log("👤 No user logged in, clearing data");
-            setChatHistory([]);
-            setMessageLikes({});
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser]);
-
-    // Save chat to history after each message (only for logged-in users)
-    useEffect(() => {
-        if (currentUser && chat.length > 0) {
-            const timeoutId = setTimeout(() => {
-                saveChatToHistory();
-            }, 1000);
-            return () => clearTimeout(timeoutId);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat, currentUser]);
-
-    const loadChatHistory = async () => {
-        if (!currentUser) {
-            console.log("❌ No user, cannot load history");
-            return;
-        }
+    // Load chat history and liked messages
+    const loadChatHistory = useRef(async () => {
+        if (!currentUser) return;
 
         try {
-            console.log("📥 Loading chat history from Firebase...");
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             const historySnap = await getDoc(historyRef);
 
@@ -149,72 +97,63 @@ export default function AiChatTab() {
                 const data = historySnap.data();
                 const sessions = data.sessions || [];
                 setChatHistory(sessions);
-                console.log("✅ Loaded chat history:", sessions.length, "sessions");
-                console.log("📋 Session previews:", sessions.map(s => s.preview));
             } else {
-                console.log("📥 No chat history found in Firebase");
                 setChatHistory([]);
             }
         } catch (error) {
-            console.error("❌ Error loading chat history:", error);
+            console.error("Error loading chat history:", error);
         }
-    };
+    });
 
-    const loadLikedMessages = async () => {
-        if (!currentUser) {
-            console.log("❌ No user, cannot load likes");
-            return;
-        }
+    const loadLikedMessages = useRef(async () => {
+        if (!currentUser) return;
 
         try {
-            console.log("📥 Loading liked messages from Firebase...");
             const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
             const likesSnap = await getDoc(likesRef);
 
             if (likesSnap.exists()) {
                 const data = likesSnap.data();
-                console.log("✅ Loaded liked messages from Firebase:", Object.keys(data).filter(k => data[k]).length);
                 setMessageLikes(data);
             } else {
-                console.log("📥 No liked messages found in Firebase");
                 setMessageLikes({});
             }
         } catch (error) {
-            console.error("❌ Error loading liked messages:", error);
+            console.error("Error loading liked messages:", error);
         }
-    };
+    });
+
+    useEffect(() => {
+        if (currentUser) {
+            loadChatHistory.current();
+            loadLikedMessages.current();
+        } else {
+            setChatHistory([]);
+            setMessageLikes({});
+        }
+    }, [currentUser]);
 
     const saveLikedMessages = async (newLikes) => {
-        if (!currentUser) {
-            console.log("❌ No user, cannot save likes");
-            return;
-        }
+        if (!currentUser) return;
 
         try {
-            console.log("💾 Saving liked messages to Firebase...");
             const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
             await setDoc(likesRef, newLikes);
-            console.log("✅ Liked messages saved to Firebase");
         } catch (error) {
-            console.error("❌ Error saving liked messages:", error);
+            console.error("Error saving liked messages:", error);
         }
     };
 
-    const saveChatToHistory = async () => {
-        if (!currentUser || chat.length === 0) {
-            console.log("❌ Cannot save: no user or empty chat");
-            return;
-        }
+    const saveChatToHistory = useRef(async () => {
+        if (!currentUser || chat.length === 0) return;
 
         try {
-            console.log("💾 Saving chat to history...");
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             const historySnap = await getDoc(historyRef);
 
             let sessions = [];
             if (historySnap.exists()) {
                 sessions = historySnap.data().sessions || [];
-                console.log("📋 Existing sessions:", sessions.length);
             }
 
             const firstUserMessage = chat.find(msg => msg.sender === "user");
@@ -235,24 +174,29 @@ export default function AiChatTab() {
 
             if (existingIndex >= 0) {
                 sessions[existingIndex] = session;
-                console.log("📝 Updated existing session:", session.preview);
             } else {
                 sessions.unshift(session);
-                // Keep only last 20 sessions
                 sessions = sessions.slice(0, 20);
-                console.log("📝 Created new session:", session.preview);
             }
 
             await setDoc(historyRef, { sessions });
             setChatHistory(sessions);
-            console.log("✅ History saved to Firebase. Total sessions:", sessions.length);
         } catch (error) {
-            console.error("❌ Error saving chat history:", error);
+            console.error("Error saving chat history:", error);
         }
-    };
+    });
+
+    // Save chat to history after each message
+    useEffect(() => {
+        if (currentUser && chat.length > 0) {
+            const timeoutId = setTimeout(() => {
+                saveChatToHistory.current();
+            }, 1000);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [chat, currentUser]);
 
     const loadHistorySession = (session) => {
-        // Convert timestamp strings back to Date objects
         const messagesWithDates = session.messages.map(msg => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
@@ -261,17 +205,13 @@ export default function AiChatTab() {
         setChat(messagesWithDates);
         setShowHistory(false);
         setShowLiked(false);
-        console.log("📂 Loaded session from history:", session.preview);
+        setShowMobileSidebar(false);
     };
 
     const loadLikedMessage = (messageId) => {
-        console.log("⭐ Looking for liked message:", messageId);
-
-        // Find the message in chat history
         for (const session of chatHistory) {
             const message = session.messages.find(msg => msg.id === messageId);
             if (message) {
-                // Convert timestamp back to Date object
                 const messageWithDate = {
                     ...message,
                     timestamp: new Date(message.timestamp)
@@ -279,11 +219,10 @@ export default function AiChatTab() {
                 setChat([messageWithDate]);
                 setShowLiked(false);
                 setShowHistory(false);
-                console.log("✅ Loaded liked message from history");
+                setShowMobileSidebar(false);
                 return;
             }
         }
-        console.log("❌ Liked message not found in history:", messageId);
     };
 
     const deleteHistorySession = async (sessionId) => {
@@ -294,7 +233,6 @@ export default function AiChatTab() {
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             await setDoc(historyRef, { sessions: updatedSessions });
             setChatHistory(updatedSessions);
-            console.log("🗑️ Deleted session:", sessionId);
         } catch (error) {
             console.error("Error deleting session:", error);
         }
@@ -308,7 +246,6 @@ export default function AiChatTab() {
             delete newLikes[messageId];
             await saveLikedMessages(newLikes);
             setMessageLikes(newLikes);
-            console.log("🗑️ Removed liked message:", messageId);
         } catch (error) {
             console.error("Error deleting liked message:", error);
         }
@@ -322,7 +259,6 @@ export default function AiChatTab() {
                 const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
                 await deleteDoc(historyRef);
                 setChatHistory([]);
-                console.log("🧹 Cleared all chat history");
             } catch (error) {
                 console.error("Error clearing history:", error);
             }
@@ -337,7 +273,6 @@ export default function AiChatTab() {
                 const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
                 await deleteDoc(likesRef);
                 setMessageLikes({});
-                console.log("🧹 Cleared all liked messages");
             } catch (error) {
                 console.error("Error clearing likes:", error);
             }
@@ -348,9 +283,9 @@ export default function AiChatTab() {
         setChat([]);
         setShowHistory(false);
         setShowLiked(false);
+        setShowMobileSidebar(false);
         setEditingMessageId(null);
         setSearchTerm("");
-        console.log("🆕 Started new chat");
     };
 
     const checkBackendConnection = async () => {
@@ -366,18 +301,14 @@ export default function AiChatTab() {
             if (response.ok) {
                 setConnectionStatus("connected");
                 setRetryCount(0);
-                console.log("✅ Backend connected successfully");
             } else {
                 setConnectionStatus("error");
-                console.error("❌ Backend health check failed");
             }
         } catch (error) {
-            console.error('❌ Backend connection failed:', error);
             setConnectionStatus("error");
         }
     };
 
-    // Enhanced backend call with session ID
     const callBackendAI = async (userQuestion, isRegeneration = false) => {
         const maxRetries = 3;
 
@@ -389,7 +320,6 @@ export default function AiChatTab() {
                     ...(isRegeneration && { variation: attempt })
                 };
 
-                console.log("🤖 Sending request to backend:", { isRegeneration, variation: attempt });
                 const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -405,34 +335,27 @@ export default function AiChatTab() {
                 setRetryCount(0);
                 return data;
             } catch (error) {
-                console.error(`Attempt ${attempt} failed:`, error);
-
                 if (attempt === maxRetries) {
                     throw error;
                 }
-
                 await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             }
         }
     };
 
-    // Fixed streaming response simulation
     const streamResponse = async (text, messageId) => {
         setIsStreaming(true);
         setStreamingMessageId(messageId);
 
         const words = text.split(' ');
-        let displayedText = '';
+        let currentDisplayedText = '';
 
-        // Use for...of loop to avoid unsafe function reference
         for (const word of words) {
-            if (!isStreaming) break; // Allow cancellation
+            if (!isStreaming) break;
+            currentDisplayedText += (currentDisplayedText === '' ? '' : ' ') + word;
 
-            displayedText += (displayedText === '' ? '' : ' ') + word;
-
-            // Use functional update to avoid closure issues
             setChat(prevChat => prevChat.map(msg =>
-                msg.id === messageId ? { ...msg, text: displayedText } : msg
+                msg.id === messageId ? { ...msg, text: currentDisplayedText } : msg
             ));
 
             await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
@@ -448,8 +371,6 @@ export default function AiChatTab() {
             setCopiedMessageId(messageId);
             setTimeout(() => setCopiedMessageId(null), 2000);
         } catch (err) {
-            console.error('Failed to copy text: ', err);
-            // Fallback
             const textArea = document.createElement('textarea');
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -461,7 +382,6 @@ export default function AiChatTab() {
         }
     };
 
-    // Message editing functionality
     const startEditing = (messageId, currentText) => {
         setEditingMessageId(messageId);
         setEditText(currentText);
@@ -483,7 +403,6 @@ export default function AiChatTab() {
         setEditText("");
     };
 
-    // Voice input functionality
     const toggleVoiceInput = () => {
         if (!recognitionRef.current) {
             alert("Speech recognition not supported in your browser");
@@ -499,7 +418,6 @@ export default function AiChatTab() {
         }
     };
 
-    // Export conversation
     const exportConversation = (format = 'txt') => {
         if (chat.length === 0) {
             alert("No conversation to export");
@@ -523,7 +441,6 @@ export default function AiChatTab() {
         }
     };
 
-    // Like functionality with immediate feedback
     const toggleLike = async (messageId) => {
         const newLikedState = !messageLikes[messageId];
         const newLikes = {
@@ -533,20 +450,15 @@ export default function AiChatTab() {
 
         setMessageLikes(newLikes);
 
-        console.log(`❤️ ${newLikedState ? 'Liked' : 'Unliked'} message:`, messageId);
-
         if (currentUser) {
             await saveLikedMessages(newLikes);
         }
     };
 
-    // FIXED: Regenerate response functionality with variation
     const regenerateResponse = async (aiMessageId) => {
-        // Find the user message that prompted this AI response
         const aiMessageIndex = chat.findIndex(msg => msg.id === aiMessageId);
         if (aiMessageIndex === -1) return;
 
-        // Find the previous user message
         let userMessageIndex = aiMessageIndex - 1;
         while (userMessageIndex >= 0 && chat[userMessageIndex].sender !== "user") {
             userMessageIndex--;
@@ -558,11 +470,9 @@ export default function AiChatTab() {
         setLoading(true);
 
         try {
-            // Remove the existing AI response
             const chatWithoutAIResponse = chat.slice(0, aiMessageIndex);
             setChat(chatWithoutAIResponse);
 
-            // Call AI with the original user question and regeneration flag
             const aiResponse = await callBackendAI(userMessage.text, true);
             const newAIMessage = {
                 sender: "ai",
@@ -576,10 +486,6 @@ export default function AiChatTab() {
             await streamResponse(aiResponse.answer, newAIMessage.id);
 
         } catch (error) {
-            console.error('Regeneration failed:', error);
-            setRetryCount(prev => prev + 1);
-
-            // Fallback response
             const fallbackMessage = {
                 sender: "ai",
                 text: "I encountered an error while regenerating the response. Please try again.",
@@ -594,7 +500,6 @@ export default function AiChatTab() {
         }
     };
 
-    // Filter history based on search
     const filteredHistory = chatHistory.filter(session =>
         session.messages.some(msg =>
             msg.text.toLowerCase().includes(searchTerm.toLowerCase())
@@ -602,11 +507,9 @@ export default function AiChatTab() {
         session.preview.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Get liked messages with their full content
     const getLikedMessagesWithContent = () => {
         const likedWithContent = [];
 
-        // Check current chat first
         chat.forEach(message => {
             if (messageLikes[message.id] && message.sender === "ai") {
                 likedWithContent.push({
@@ -617,7 +520,6 @@ export default function AiChatTab() {
             }
         });
 
-        // Then check history
         chatHistory.forEach(session => {
             session.messages.forEach(message => {
                 if (messageLikes[message.id] && message.sender === "ai" &&
@@ -631,7 +533,6 @@ export default function AiChatTab() {
             });
         });
 
-        console.log("📋 Found liked messages with content:", likedWithContent.length);
         return likedWithContent.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     };
 
@@ -669,12 +570,9 @@ export default function AiChatTab() {
                 };
 
                 setChat([...newChat, aiMessage]);
-
-                // Start streaming effect
                 await streamResponse(aiResponse.answer, aiMessage.id);
 
             } catch (error) {
-                console.error('AI request failed:', error);
                 setRetryCount(prev => prev + 1);
                 handleFallbackResponse(newChat, messageText);
             } finally {
@@ -686,7 +584,7 @@ export default function AiChatTab() {
     };
 
     const handleFallbackResponse = (newChat, userQuestion) => {
-        const fallbackResponse = "I'm currently unable to connect to the backend server. Please make sure the backend is running and try again. You can also try reconnecting using the button above.";
+        const fallbackResponse = "I'm currently unable to connect to the backend server. Please make sure the backend is running and try again.";
 
         const aiMessage = {
             sender: "ai",
@@ -722,7 +620,6 @@ export default function AiChatTab() {
         });
     };
 
-    // Enhanced text renderer
     const renderText = (text) => {
         if (!text) {
             const textColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
@@ -866,35 +763,208 @@ export default function AiChatTab() {
         ? 'bg-gray-700/80 border border-gray-600/50 text-gray-400'
         : 'bg-white/90 border border-gray-200/60 text-gray-600';
 
+    // Mobile sidebar component
+    const MobileSidebar = () => (
+        <div className="lg:hidden fixed inset-0 z-50">
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setShowMobileSidebar(false)}
+            />
+            <div className={`absolute right-0 top-0 h-full w-80 ${sidebarBg} overflow-y-auto`}>
+                <div className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className={`font-semibold ${titleColor} flex items-center gap-2`}>
+                            {showLiked ? <Star className="w-5 h-5" /> : <History className="w-5 h-5" />}
+                            {showLiked ? 'Liked Responses' : 'Chat History'}
+                        </h3>
+                        <button
+                            onClick={() => setShowMobileSidebar(false)}
+                            className="p-2 rounded-lg hover:bg-gray-500/20"
+                        >
+                            <CloseIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Search Bar */}
+                    {(showHistory && chatHistory.length > 0) && (
+                        <div className="relative mb-4">
+                            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search conversations..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+                                    theme === 'dark'
+                                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
+                                        : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500'
+                                } focus:outline-none focus:border-purple-500`}
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {showLiked ? (
+                        likedMessagesWithContent.length === 0 ? (
+                            <div className={`text-center py-8 ${textSecondary}`}>
+                                <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">No liked responses yet</p>
+                                <p className="text-xs mt-1">Click the like button on any AI response to save it here</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {likedMessagesWithContent.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={`p-3 rounded-xl transition-all border ${
+                                            theme === 'dark'
+                                                ? 'bg-gray-700/30 border-gray-600/30'
+                                                : 'bg-white/60 border-gray-200/60'
+                                        }`}
+                                    >
+                                        <div
+                                            onClick={() => {
+                                                loadLikedMessage(message.id);
+                                                setShowMobileSidebar(false);
+                                            }}
+                                            className="flex-1 cursor-pointer"
+                                        >
+                                            <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
+                                                {message.text.substring(0, 80)}...
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <p className={`text-xs ${textSecondary}`}>
+                                                    {formatDate(message.timestamp)}
+                                                </p>
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                                    <span className="text-xs text-yellow-500">Liked</span>
+                                                </div>
+                                            </div>
+                                            {message.sessionPreview && (
+                                                <p className={`text-xs ${textSecondary} mt-1`}>
+                                                    From: {message.sessionPreview}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteLikedMessage(message.id);
+                                            }}
+                                            className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                            title="Remove from liked"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    ) : (
+                        filteredHistory.length === 0 ? (
+                            <div className={`text-center py-8 ${textSecondary}`}>
+                                {searchTerm ? (
+                                    <>
+                                        <SearchIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No conversations found</p>
+                                        <p className="text-xs mt-1">Try different search terms</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No chat history yet</p>
+                                        <p className="text-xs mt-1">Start a conversation!</p>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {filteredHistory.map((session) => (
+                                    <div
+                                        key={session.id}
+                                        className={`p-3 rounded-xl cursor-pointer transition-all border ${
+                                            theme === 'dark'
+                                                ? 'bg-gray-700/30 hover:bg-gray-700/50 border-gray-600/30'
+                                                : 'bg-white/60 hover:bg-white border-gray-200/60'
+                                        }`}
+                                    >
+                                        <div
+                                            onClick={() => {
+                                                loadHistorySession(session);
+                                                setShowMobileSidebar(false);
+                                            }}
+                                            className="flex-1"
+                                        >
+                                            <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
+                                                {session.preview}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <p className={`text-xs ${textSecondary}`}>
+                                                    {new Date(session.timestamp).toLocaleDateString()} • {session.messages.length} messages
+                                                </p>
+                                                <Clock className="w-3 h-3 text-gray-400" />
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteHistorySession(session.id);
+                                            }}
+                                            className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                            title="Delete session"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className={`flex flex-col h-screen ${bgGradient} ${textPrimary}`}>
+            {/* Mobile Sidebar */}
+            {showMobileSidebar && <MobileSidebar />}
+
             {/* Header with Connection Status */}
-            <div className={`${headerBg} p-6`}>
+            <div className={`${headerBg} p-4 sm:p-6`}>
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl">
-                                <Bot className="w-6 h-6 text-white" />
+                                <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className={`text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent ${theme === 'light' ? 'from-purple-700 to-blue-700' : ''}`}>
-                                    CineCoolAI Assistant
+                                <h1 className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent ${theme === 'light' ? 'from-purple-700 to-blue-700' : ''}`}>
+                                    CineCoolAI
                                 </h1>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
+                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
                                         theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
                                     }`}>
                                         <Zap className={`w-3 h-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                                        <span className={`text-xs font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Movie & TV Expert</span>
+                                        <span className={`font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Movie & TV Expert</span>
                                     </div>
                                     {/* Connection Status */}
                                     <div className="flex items-center gap-1.5">
                                         <div className={`w-2 h-2 rounded-full ${
                                             connectionStatus === 'connected'
-                                                ? 'bg-green-500 shadow-lg shadow-green-500/50'
+                                                ? 'bg-green-500'
                                                 : connectionStatus === 'error'
-                                                    ? 'bg-red-500 shadow-lg shadow-red-500/50'
-                                                    : 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50'
+                                                    ? 'bg-red-500'
+                                                    : 'bg-yellow-500 animate-pulse'
                                         }`} />
                                         <span className={`text-xs font-medium ${
                                             connectionStatus === 'connected'
@@ -906,102 +976,115 @@ export default function AiChatTab() {
                                             {connectionStatus === 'connected'
                                                 ? 'Connected'
                                                 : connectionStatus === 'error'
-                                                    ? `Backend Offline${retryCount > 0 ? ` (Retry ${retryCount})` : ''}`
-                                                    : 'Checking Connection'}
+                                                    ? `Offline${retryCount > 0 ? ` (${retryCount})` : ''}`
+                                                    : 'Checking'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Mobile Menu Button */}
                         <div className="flex items-center gap-2">
-                            {/* Export Button */}
-                            {chat.length > 0 && (
+                            <button
+                                onClick={() => setShowMobileSidebar(true)}
+                                className="lg:hidden p-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 transition-colors"
+                            >
+                                <Menu className="w-5 h-5" />
+                            </button>
+
+                            {/* Desktop buttons */}
+                            <div className="hidden lg:flex items-center gap-2">
+                                {/* Export Button */}
+                                {chat.length > 0 && (
+                                    <button
+                                        onClick={() => exportConversation('txt')}
+                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                            theme === 'dark'
+                                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
+                                                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-600'
+                                        }`}
+                                        title="Export conversation"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Export</span>
+                                    </button>
+                                )}
+                                {/* New Chat Button */}
                                 <button
-                                    onClick={() => exportConversation('txt')}
+                                    onClick={startNewChat}
                                     className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
                                         theme === 'dark'
-                                            ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
-                                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-600'
+                                            ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                                            : 'bg-green-500/20 hover:bg-green-500/30 text-green-600'
                                     }`}
-                                    title="Export conversation"
+                                    title="Start a new chat"
                                 >
-                                    <Download className="w-4 h-4" />
-                                    Export
+                                    <Plus className="w-4 h-4" />
+                                    <span className="hidden sm:inline">New Chat</span>
                                 </button>
-                            )}
-                            {/* New Chat Button */}
-                            <button
-                                onClick={startNewChat}
-                                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                    theme === 'dark'
-                                        ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
-                                        : 'bg-green-500/20 hover:bg-green-500/30 text-green-600'
-                                }`}
-                                title="Start a new chat"
-                            >
-                                <Plus className="w-4 h-4" />
-                                New Chat
-                            </button>
-                            {/* Liked Button */}
-                            {currentUser && (
-                                <button
-                                    onClick={() => {
-                                        setShowLiked(!showLiked);
-                                        setShowHistory(false);
-                                    }}
-                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                        showLiked
-                                            ? 'bg-yellow-500/30 text-yellow-400'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                                : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
-                                    }`}
-                                >
-                                    <Star className="w-4 h-4" />
-                                    Liked ({likedMessagesWithContent.length})
-                                </button>
-                            )}
-                            {/* History Button */}
-                            {currentUser && (
-                                <button
-                                    onClick={() => {
-                                        setShowHistory(!showHistory);
-                                        setShowLiked(false);
-                                    }}
-                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                        showHistory
-                                            ? 'bg-purple-500/30 text-purple-400'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                                : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
-                                    }`}
-                                >
-                                    <History className="w-4 h-4" />
-                                    History ({chatHistory.length})
-                                </button>
-                            )}
+                                {/* Liked Button */}
+                                {currentUser && (
+                                    <button
+                                        onClick={() => {
+                                            setShowLiked(!showLiked);
+                                            setShowHistory(false);
+                                        }}
+                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                            showLiked
+                                                ? 'bg-yellow-500/30 text-yellow-400'
+                                                : theme === 'dark'
+                                                    ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                                    : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        <Star className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Liked ({likedMessagesWithContent.length})</span>
+                                    </button>
+                                )}
+                                {/* History Button */}
+                                {currentUser && (
+                                    <button
+                                        onClick={() => {
+                                            setShowHistory(!showHistory);
+                                            setShowLiked(false);
+                                        }}
+                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                            showHistory
+                                                ? 'bg-purple-500/30 text-purple-400'
+                                                : theme === 'dark'
+                                                    ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                                    : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        <History className="w-4 h-4" />
+                                        <span className="hidden sm:inline">History ({chatHistory.length})</span>
+                                    </button>
+                                )}
+                            </div>
+
                             {connectionStatus === 'error' && (
                                 <button
                                     onClick={checkBackendConnection}
-                                    className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 text-sm transition-colors"
+                                    className="hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 text-sm transition-colors"
                                 >
                                     <RefreshCw className="w-3 h-3" />
-                                    Retry Connection
+                                    Retry
                                 </button>
                             )}
                         </div>
                     </div>
-                    <p className={`${textSecondary} text-sm`}>
+                    <p className={`${textSecondary} text-xs sm:text-sm`}>
                         Character psychology • Show comparisons • Genre deep dives • Writing analysis • Recommendations
                         {currentUser && <span className="ml-2">• 💾 History saved automatically</span>}
                     </p>
                 </div>
             </div>
 
-            <div className="flex-1 flex max-w-7xl mx-auto w-full p-4 gap-6">
-                {/* History/Liked Sidebar */}
+            <div className="flex-1 flex max-w-7xl mx-auto w-full p-2 sm:p-4 gap-4 sm:gap-6">
+                {/* History/Liked Sidebar - Desktop */}
                 {(currentUser && (showHistory || showLiked)) && (
-                    <div className={`w-80 ${sidebarBg} rounded-2xl p-4 overflow-y-auto`}>
+                    <div className={`hidden lg:block w-80 ${sidebarBg} rounded-2xl p-4 overflow-y-auto`}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className={`font-semibold ${titleColor} flex items-center gap-2`}>
                                 {showLiked ? <Star className="w-5 h-5" /> : <History className="w-5 h-5" />}
@@ -1162,48 +1245,45 @@ export default function AiChatTab() {
                 )}
 
                 {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col min-w-0">
                     {/* Chat Window */}
-                    <div className={`flex-1 overflow-y-auto space-y-6 p-4 rounded-2xl ${chatWindowBg}`}>
+                    <div className={`flex-1 overflow-y-auto space-y-4 sm:space-y-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl ${chatWindowBg}`}>
                         {chat.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                    <Film className="w-10 h-10 text-white" />
+                            <div className="text-center py-8 sm:py-12">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+                                    <Film className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                                 </div>
-                                <h3 className={`text-xl font-semibold ${titleColor} mb-2`}>
+                                <h3 className={`text-lg sm:text-xl font-semibold ${titleColor} mb-2`}>
                                     CineCoolAI Assistant 🎬
                                 </h3>
-                                <p className={`${textSecondary} mb-2 max-w-md mx-auto`}>
+                                <p className={`${textSecondary} mb-2 max-w-md mx-auto text-sm`}>
                                     Your AI-powered film and television analyst. I specialize in deep character analysis, show comparisons, and storytelling insights.
                                 </p>
 
                                 {/* Connection Status Alert */}
                                 {connectionStatus === 'error' && (
-                                    <div className={`${theme === 'dark' ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} border rounded-xl p-4 max-w-md mx-auto mb-4`}>
+                                    <div className={`${theme === 'dark' ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} border rounded-xl p-3 sm:p-4 max-w-md mx-auto mb-4`}>
                                         <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'} mb-2`}>
                                             <RefreshCw className="w-4 h-4" />
                                             <span className="text-sm font-semibold">Backend Connection Required</span>
                                         </div>
                                         <p className={`text-xs ${theme === 'dark' ? 'text-red-300' : 'text-red-700'}`}>
-                                            Spring Boot backend is offline. Using local analysis mode. Start your backend for full AI features.
+                                            Spring Boot backend is offline. Using local analysis mode.
                                         </p>
-                                        <div className={`mt-2 text-xs ${theme === 'dark' ? 'text-red-300' : 'text-red-700'}`}>
-                                            <strong>Backend URL:</strong> {API_BASE_URL}
-                                        </div>
                                     </div>
                                 )}
 
                                 {/* Quick Suggestions */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mb-6">
+                                <div className="grid grid-cols-1 gap-2 sm:gap-3 max-w-2xl mx-auto mb-6">
                                     {suggestions.map((suggestion, index) => (
                                         <button
                                             key={index}
                                             onClick={() => setQuestion(suggestion)}
-                                            className={`p-3 text-left ${suggestionBg} transition-all hover:border-purple-500/30 group ${theme === 'light' ? 'hover:shadow-md' : ''}`}
+                                            className={`p-2 sm:p-3 text-left ${suggestionBg} transition-all hover:border-purple-500/30 group ${theme === 'light' ? 'hover:shadow-md' : ''}`}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <Sparkles className={`w-4 h-4 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} group-hover:scale-110 transition-transform`} />
-                                                <span className={`text-sm ${suggestionText} ${theme === 'dark' ? 'group-hover:text-white' : 'group-hover:text-gray-900'}`}>
+                                                <Sparkles className={`w-3 h-3 sm:w-4 sm:h-4 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} group-hover:scale-110 transition-transform`} />
+                                                <span className={`text-xs sm:text-sm ${suggestionText} ${theme === 'dark' ? 'group-hover:text-white' : 'group-hover:text-gray-900'}`}>
                                                     {suggestion}
                                                 </span>
                                             </div>
@@ -1211,7 +1291,7 @@ export default function AiChatTab() {
                                     ))}
                                 </div>
 
-                                <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-xl p-4 max-w-md mx-auto`}>
+                                <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-xl p-3 sm:p-4 max-w-md mx-auto`}>
                                     <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-2`}>
                                         <Zap className="w-4 h-4" />
                                         <span className="text-sm font-semibold">Powered by AI + TMDB</span>
@@ -1226,36 +1306,36 @@ export default function AiChatTab() {
                         {chat.map((msg, i) => (
                             <div
                                 key={i}
-                                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
+                                className={`flex gap-2 sm:gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
                             >
                                 {/* Avatar */}
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                                <div className={`flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                                     msg.sender === "user"
                                         ? "bg-blue-500"
                                         : "bg-gradient-to-r from-purple-500 to-blue-500"
                                 }`}>
                                     {msg.sender === "user" ? (
-                                        <User className="w-4 h-4 text-white" />
+                                        <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                     ) : (
-                                        <Bot className="w-4 h-4 text-white" />
+                                        <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                     )}
                                 </div>
 
                                 {/* Message */}
                                 <div className={`flex-1 max-w-[85%] ${msg.sender === "user" ? "text-right" : "text-left"}`}>
-                                    <div className={`inline-block p-4 rounded-2xl ${
+                                    <div className={`inline-block p-3 sm:p-4 rounded-xl sm:rounded-2xl ${
                                         msg.sender === "user"
                                             ? `${messageUserBg} rounded-br-none`
                                             : `${messageAIBg} rounded-bl-none ${theme === 'light' ? 'shadow-sm' : ''}`
                                     }`}>
                                         {msg.sender === "user" ? (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 {editingMessageId === msg.id ? (
                                                     <div className="space-y-2">
                                                         <textarea
                                                             value={editText}
                                                             onChange={(e) => setEditText(e.target.value)}
-                                                            className={`w-full p-2 rounded border ${
+                                                            className={`w-full p-2 rounded border text-sm ${
                                                                 theme === 'dark'
                                                                     ? 'bg-gray-600 border-gray-500 text-white'
                                                                     : 'bg-white border-gray-300 text-gray-900'
@@ -1265,14 +1345,14 @@ export default function AiChatTab() {
                                                         <div className="flex gap-2 justify-end">
                                                             <button
                                                                 onClick={saveEdit}
-                                                                className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded text-sm"
+                                                                className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded text-xs"
                                                             >
                                                                 <Save className="w-3 h-3" />
                                                                 Save
                                                             </button>
                                                             <button
                                                                 onClick={cancelEdit}
-                                                                className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded text-sm"
+                                                                className="flex items-center gap-1 px-2 py-1 bg-gray-500 text-white rounded text-xs"
                                                             >
                                                                 <X className="w-3 h-3" />
                                                                 Cancel
@@ -1281,7 +1361,7 @@ export default function AiChatTab() {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <div className="text-white">{msg.text}</div>
+                                                        <div className="text-white text-sm sm:text-base">{msg.text}</div>
                                                         <div className="flex gap-1 justify-end">
                                                             <button
                                                                 onClick={() => startEditing(msg.id, msg.text)}
@@ -1302,11 +1382,13 @@ export default function AiChatTab() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="space-y-3">
-                                                {renderText(msg.text)}
+                                            <div className="space-y-2 sm:space-y-3">
+                                                <div className="text-sm sm:text-base">
+                                                    {renderText(msg.text)}
+                                                </div>
 
                                                 {/* Action Buttons for AI Messages */}
-                                                <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-300/30">
+                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-2 sm:mt-3 pt-2 border-t border-gray-300/30">
                                                     <div className="flex gap-1">
                                                         <button
                                                             onClick={() => regenerateResponse(msg.id)}
@@ -1338,7 +1420,7 @@ export default function AiChatTab() {
                                                     </div>
                                                     <button
                                                         onClick={() => copyToClipboard(msg.text, msg.id)}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all ${
                                                             theme === 'dark'
                                                                 ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300 hover:text-white'
                                                                 : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600 hover:text-gray-800'
@@ -1373,10 +1455,10 @@ export default function AiChatTab() {
 
                         {loading && (
                             <div className="flex gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                                    <Bot className="w-4 h-4 text-white" />
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                 </div>
-                                <div className={`${loadingBg} rounded-2xl rounded-bl-none p-4 ${theme === 'light' ? 'shadow-sm' : ''}`}>
+                                <div className={`${loadingBg} rounded-xl sm:rounded-2xl rounded-bl-none p-3 sm:p-4 ${theme === 'light' ? 'shadow-sm' : ''}`}>
                                     <div className="flex items-center gap-2">
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                         <span className="text-sm">CineCoolAI assistant thinking<span className="animate-pulse">...</span></span>
@@ -1388,22 +1470,22 @@ export default function AiChatTab() {
                     </div>
 
                     {/* Input Area */}
-                    <div className={`mt-4 p-4 ${inputAreaBg} rounded-2xl ${theme === 'light' ? 'shadow-md' : ''}`}>
-                        <div className="flex gap-3">
+                    <div className={`mt-3 sm:mt-4 p-3 sm:p-4 ${inputAreaBg} rounded-xl sm:rounded-2xl ${theme === 'light' ? 'shadow-md' : ''}`}>
+                        <div className="flex gap-2 sm:gap-3">
                             <div className="flex-1 relative">
                                 <textarea
                                     rows="1"
-                                    className={`w-full ${theme === 'dark' ? 'bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400' : 'bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500'} border rounded-xl px-4 py-3 pr-24 resize-none focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all`}
-                                    placeholder="Ask about character analysis, show comparisons, or genre insights..."
+                                    className={`w-full ${theme === 'dark' ? 'bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400' : 'bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500'} border rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 pr-20 sm:pr-24 resize-none focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm sm:text-base`}
+                                    placeholder="Ask about character analysis, show comparisons..."
                                     value={question}
                                     onChange={(e) => setQuestion(e.target.value)}
                                     onKeyDown={handleKey}
-                                    style={{ minHeight: '48px', maxHeight: '120px' }}
+                                    style={{ minHeight: '44px', maxHeight: '100px' }}
                                 />
                                 {/* Voice Input Button */}
                                 <button
                                     onClick={toggleVoiceInput}
-                                    className={`absolute right-12 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all ${
+                                    className={`absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 rounded transition-all ${
                                         isListening
                                             ? 'bg-red-500 text-white animate-pulse'
                                             : theme === 'dark'
@@ -1412,25 +1494,25 @@ export default function AiChatTab() {
                                     }`}
                                     title={isListening ? "Stop listening" : "Start voice input"}
                                 >
-                                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                                    {isListening ? <MicOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
                                 </button>
                             </div>
                             <button
                                 onClick={() => sendMessage()}
                                 disabled={loading || !question.trim()}
-                                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                                className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg sm:rounded-xl font-semibold transition-all duration-200 flex items-center gap-1 sm:gap-2 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
                             >
                                 {loading ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <Send className="w-4 h-4" />
                                 )}
-                                Send
+                                <span className="hidden sm:inline">Send</span>
                             </button>
                         </div>
                         <div className="flex justify-between items-center mt-2 px-1">
                             <span className={`text-xs ${textSecondary}`}>
-                                Press Enter to send, Shift+Enter for new line
+                                Press Enter to send
                                 {isListening && <span className="ml-2 text-red-500">• Listening...</span>}
                             </span>
                             <span className={`text-xs ${
@@ -1440,39 +1522,67 @@ export default function AiChatTab() {
                                         ? theme === 'dark' ? 'text-red-400' : 'text-red-600'
                                         : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
                             }`}>
-                                {connectionStatus === 'connected' ? 'Backend Connected' :
-                                    connectionStatus === 'error' ? 'Local Mode Active' : 'Checking Connection'}
+                                {connectionStatus === 'connected' ? 'Connected' :
+                                    connectionStatus === 'error' ? 'Local Mode' : 'Checking'}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                {/* Pro Tips Sidebar */}
+                {/* Pro Tips Sidebar - Desktop */}
                 <div className="w-80 hidden lg:block">
                     <div className={`${sidebarBg} rounded-2xl p-6 sticky top-6 ${theme === 'light' ? 'shadow-lg' : ''}`}>
                         <div className="flex items-center gap-2 mb-4">
-                            <Lightbulb className={`w-5 h-5 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                            <Zap className={`w-5 h-5 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
                             <h3 className={`font-semibold ${titleColor}`}>Pro Tips</h3>
                         </div>
 
                         <div className="space-y-4">
-                            {proTips.map((tip, index) => (
-                                <div key={index} className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
-                                            {tip.icon}
-                                        </div>
-                                        <div>
-                                            <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
-                                                {tip.title}
-                                            </h4>
-                                            <p className={`text-xs ${textSecondary}`}>
-                                                {tip.description}
-                                            </p>
-                                        </div>
+                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
+                                        <Search className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
+                                            Be Specific
+                                        </h4>
+                                        <p className={`text-xs ${textSecondary}`}>
+                                            Mention character names, specific seasons, or particular aspects
+                                        </p>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
+                                        <TrendingUp className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
+                                            Compare & Contrast
+                                        </h4>
+                                        <p className={`text-xs ${textSecondary}`}>
+                                            Ask to compare characters, shows, or genres for deeper insights
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
+                                <div className="flex items-start gap-3">
+                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
+                                        <Heart className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
+                                            Character Focus
+                                        </h4>
+                                        <p className={`text-xs ${textSecondary}`}>
+                                            I specialize in character psychology and development arcs
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-300/50'}`}>
