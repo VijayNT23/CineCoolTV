@@ -65,6 +65,10 @@ OPENAI_API_KEY=your-openai-api-key-here
 TMDB_API_KEY=your-tmdb-api-key-here
 
 AI_PROVIDER=gemini
+
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/<your-database-name>
+SPRING_DATASOURCE_USERNAME=<your-database-username>
+SPRING_DATASOURCE_PASSWORD=<your-database-password>
 ```
 
 #### Get API Keys
@@ -142,10 +146,6 @@ cd backend
 ./mvnw clean package -DskipTests
 ```
 
-
-## 📄 License
-
-This project is for educational purposes.
 
 ## 🤝 Contributing
 
