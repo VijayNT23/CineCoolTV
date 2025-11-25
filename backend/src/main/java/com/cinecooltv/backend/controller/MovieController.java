@@ -11,7 +11,7 @@ import java.util.*;
 //@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class MovieController {
 
-    @Value("${TMDB_API_KEY}")
+    @Value("${tmdb.api.key}")
     private String tmdbApiKey;
 
     @GetMapping("/search")

@@ -18,4 +18,3 @@ public class HealthController {
         return status;
     }
 }
-

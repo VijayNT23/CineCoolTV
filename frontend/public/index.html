@@ -13,20 +13,26 @@
   <!-- ✅ Enhanced instant theme load -->
   <script>
     (() => {
-      const storedTheme = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = storedTheme || (prefersDark ? "dark" : "light");
+      try {
+        const storedTheme = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = storedTheme || (prefersDark ? "dark" : "light");
 
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-        document.documentElement.setAttribute("data-theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.setAttribute("data-theme", "light");
+        if (theme === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+
+        // Add initial-load class to prevent transitions during initial render
+        if (document.body) {
+          document.body.classList.add('initial-load');
+        }
+      } catch (error) {
+        console.log('Theme initialization error:', error);
       }
-
-      // Add initial-load class to prevent transitions during initial render
-      document.body.classList.add('initial-load');
     })();
   </script>
 
@@ -35,5 +41,7 @@
 <body class="initial-load">
 <noscript>You need to enable JavaScript to run this app.</noscript>
 <div id="root"></div>
+
+<!-- Remove any other scripts that might be causing the classList error -->
 </body>
 </html>

@@ -1,17 +1,11 @@
-// Updated App.js with ErrorBoundary
+
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
-// Components
 import Navbar from "./components/Navbar";
 import PerformanceOptimizer from "./components/PerformanceOptimizer";
 import ErrorBoundary from "./components/ErrorBoundary";
-
-// Context
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-
-// Pages
 import AiChatTab from "./pages/AiChatTab";
 import SearchTab from "./pages/SearchTab";
 import ProfileTab from "./pages/ProfileTab";

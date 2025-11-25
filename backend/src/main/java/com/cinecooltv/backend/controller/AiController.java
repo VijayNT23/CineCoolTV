@@ -9,129 +9,216 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/ai")
-//@CrossOrigin(origins = "${ALLOWED_ORIGINS:http://localhost:3000}")
 public class AiController {
 
-    @Value("${GEMINI_API_KEY:}")
-    private String geminiKey;
-
-    @Value("${TMDB_API_KEY:}")
+    @Value("${tmdb.api.key}")
     private String tmdbKey;
 
-    @Value("${AI_PROVIDER:gemini}")
-    private String aiProvider;
+    @Value("${gemini.api.key}")
+    private String geminiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private static final String GEMINI_API_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+
+    private static final String MODEL = "gemini-2.0-flash";
+
+    // ------------------------------
+    // 🧠 Conversation Memory (Last 10 Messages) - Per Session
+    // ------------------------------
+    private final Map<String, List<String>> conversationSessions = new HashMap<>();
+    private String currentSessionId = "default";
+
     @PostMapping("/ask")
-    public ResponseEntity<Map<String, Object>> askAI(@RequestBody Map<String, String> request) {
-        String question = request.get("question");
+    public ResponseEntity<Map<String, Object>> askAI(@RequestBody Map<String, Object> request) {
+
+        String question = (String) request.get("question");
+        Integer variation = (Integer) request.get("variation");
+        String sessionId = (String) request.get("sessionId");
+
+        if (sessionId == null) {
+            sessionId = "default";
+        }
+        currentSessionId = sessionId;
+
+        // Initialize session if not exists
+        conversationSessions.putIfAbsent(sessionId, new ArrayList<>());
+        List<String> conversationHistory = conversationSessions.get(sessionId);
 
         if (question == null || question.trim().isEmpty()) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("answer", "Please provide a valid question about cinema, movies, series, or characters.");
-            error.put("movies", new ArrayList<>());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "answer", "Please enter a valid movie/series question.",
+                    "movies", new ArrayList<>()
+            ));
         }
 
-        Map<String, Object> result = new HashMap<>();
+        if (geminiKey == null || geminiKey.isBlank()) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "answer", "❌ Gemini API key missing on backend.",
+                    "movies", new ArrayList<>()
+            ));
+        }
+
+        // Handle regeneration - don't add to history if it's a regeneration
+        boolean isRegeneration = variation != null && variation > 0;
+
+        if (!isRegeneration) {
+            // Add question to memory only for new questions, not regenerations
+            conversationHistory.add("User: " + question);
+            if (conversationHistory.size() > 10) {
+                conversationHistory.remove(0);
+            }
+        }
+
         try {
-            // Determine which AI provider to use - Only Gemini supported now
-            boolean useGemini = (geminiKey != null && !geminiKey.isEmpty() && !geminiKey.equals("your-gemini-key-here"));
+            String aiResponse = callGemini(question, conversationHistory, isRegeneration, variation);
 
-            if (!useGemini) {
-                throw new RuntimeException("No AI API key configured. Please set GEMINI_API_KEY environment variable or in application.properties");
+            if (!isRegeneration) {
+                // Store AI response in memory only for new questions
+                conversationHistory.add("AI: " + aiResponse);
+                if (conversationHistory.size() > 10) {
+                    conversationHistory.remove(0);
+                }
             }
 
-            if (tmdbKey == null || tmdbKey.isEmpty() || tmdbKey.equals("your-tmdb-key-here")) {
-                System.out.println("Warning: TMDB API key not configured. Movie recommendations may not work.");
-            }
-
-            String aiResponse = callGemini(question);
             List<Map<String, Object>> movies = extractMoviesFromText(aiResponse);
-            String formatted = formatResponse(aiResponse, movies);
-            result.put("answer", formatted);
-            result.put("movies", movies);
-            return ResponseEntity.ok(result);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("answer", aiResponse);
+            response.put("movies", movies);
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            System.err.println("AI Service Error: " + e.getMessage());
-            String errorMsg = "⚠️ Error: " + e.getMessage();
-            errorMsg += "\n\nDebug Info:";
-            errorMsg += "\n• Gemini Key: " + (geminiKey != null && !geminiKey.isEmpty() && !geminiKey.equals("your-gemini-key-here") ? "✓ Set" : "✗ Not set");
-            errorMsg += "\n• AI Provider: " + aiProvider;
-            errorMsg += "\n\nPlease check your API keys in application.properties or environment variables.";
-            result.put("answer", errorMsg);
-            result.put("movies", new ArrayList<>());
-            return ResponseEntity.status(500).body(result);
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "answer", "⚠️ Gemini API error: " + e.getMessage(),
+                    "movies", new ArrayList<>()
+            ));
         }
     }
 
-    private String callGemini(String question) {
-        String url = String.format("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=%s", geminiKey);
+    // --------------------------------------------------------------------
+    // 🔥 SMART UNIVERSAL PROMPT + MEMORY INCLUDED + REGENERATION SUPPORT
+    // --------------------------------------------------------------------
+    private String callGemini(String question, List<String> conversationHistory, boolean isRegeneration, Integer variation) {
+
+        String systemPrompt = """
+You are CineCoolAI — an intelligent movie & series analyst.
+
+Your abilities:
+• Understand ANY question type (comparison, why, how, what, rankings, reviews, summaries).
+• Automatically adapt response structure based on question type.
+• Use conversation memory to continue context — NEVER ask the user to repeat.
+• Provide deep reasoning, cinematic insights, and clear explanations.
+• Keep responses clean, compact, and mobile-friendly.
+• Use small emojis only — avoid BIG headers or oversized text.
+
+IMPORTANT REGENERATION BEHAVIOR:
+• When user requests regeneration, provide a DIFFERENT perspective or analysis
+• Use different examples, different structure, or different emphasis
+• Never say "I already answered this" or "as I mentioned before"
+• Treat each regeneration as a fresh opportunity to explore the topic
+
+General Style:
+• Short paragraphs, clean bullet points.
+• No overuse of bold; clarity is priority.
+• Use emojis like 🎬 ⭐ 🔍 🥇 🎭 📺 💡
+• For comparisons → provide detailed head-to-head breakdowns.
+• For follow-up questions → continue naturally using stored memory.
+
+-------------------------
+⭐ UNIVERSAL FORMAT RULE
+-------------------------
+
+You must decide the structure based on the question:
+1. If comparison → Overview, Key Differences, Similarities, Strengths, Verdict.
+2. If "why" → cause → effect explanation.
+3. If "how" → step-by-step logic.
+4. If "what" → definition + context + examples.
+5. If recommendations → genre insights + reasoning.
+6. If story/theme → summary + analysis.
+7. If ranking → clear list + short value notes.
+
+""";
+
+        // Build conversation memory block (exclude for regenerations to avoid repetition detection)
+        StringBuilder memoryBlock = new StringBuilder();
+        if (!isRegeneration && !conversationHistory.isEmpty()) {
+            memoryBlock.append("\nConversation history:\n");
+            for (String entry : conversationHistory) {
+                memoryBlock.append(entry).append("\n");
+            }
+        }
+
+        // Add regeneration instruction if this is a regeneration
+        String regenerationInstruction = "";
+        if (isRegeneration) {
+            regenerationInstruction = """
+                    
+IMPORTANT: This is a regeneration request. Provide a FRESH perspective:
+• Use different examples or analogies
+• Try a different analytical approach
+• Focus on different aspects of the topic
+• Structure your response differently
+• Do NOT reference previous answers
+                    """;
+        }
+
+        // Add variation for different responses
+        String variationInstruction = "";
+        if (variation != null) {
+            switch (variation % 3) {
+                case 1:
+                    variationInstruction = "\nFocus more on character development and emotional arcs.";
+                    break;
+                case 2:
+                    variationInstruction = "\nEmphasize cinematic techniques and directorial choices.";
+                    break;
+                default:
+                    variationInstruction = "\nAnalyze from a thematic and cultural perspective.";
+            }
+        }
+
+        JSONObject body = new JSONObject()
+                .put("contents", new JSONArray()
+                        .put(
+                                new JSONObject()
+                                        .put("role", "user")
+                                        .put("parts", new JSONArray()
+                                                .put(new JSONObject()
+                                                        .put("text",
+                                                                systemPrompt
+                                                                        + memoryBlock
+                                                                        + regenerationInstruction
+                                                                        + variationInstruction
+                                                                        + "\n\nUSER QUESTION:\n"
+                                                                        + question
+                                                        )
+                                                )
+                                        )
+                        )
+                );
+
+        String url = String.format(GEMINI_API_URL, MODEL, geminiKey);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // Enhanced cinema-focused system prompt with formatting instructions
-        String systemPrompt = "You are CineCoolAI, an expert cinema assistant specialized in:\n" +
-                "- Movie and series analysis\n" +
-                "- Character breakdowns and psychological analysis\n" +
-                "- Story summaries and plot explanations\n" +
-                "- Cinematic techniques and filmmaking insights\n" +
-                "- Genre analysis and recommendations\n\n" +
-                "Always provide detailed, insightful responses focused on cinema. For character questions, analyze:\n" +
-                "- Character motivations and arcs\n" +
-                "- Relationships and dynamics\n" +
-                "- Symbolism and themes\n" +
-                "- Performance and direction\n\n" +
-                "For story questions, discuss:\n" +
-                "- Plot structure and pacing\n" +
-                "- Themes and messages\n" +
-                "- Narrative techniques\n" +
-                "- Cultural and historical context\n\n" +
-                "FORMATTING RULES (CRITICAL - Follow exactly):\n" +
-                "1. Use emojis at the start of sections (💥, 🧠, 🕵️‍♂️, etc.)\n" +
-                "2. For numbered lists: \"💥 **1. *Title***\" format (emoji + **number. *title***)\n" +
-                "3. For subtitles: \"🧠 *Description*\" format (emoji + *italic text*)\n" +
-                "4. Use **bold** for important titles and *italic* for descriptions\n" +
-                "5. Use \"---\" as separators between major sections\n" +
-                "6. Use 🔸 for bonus items\n" +
-                "7. Make responses engaging, stylish, and cinematic\n" +
-                "8. Keep paragraphs short and punchy\n\n" +
-                "Example format:\n" +
-                "💥 **1. *Lie to Me***\n" +
-                "🧠 *When reading faces becomes a weapon.*\n" +
-                "Description text here...\n" +
-                "---\n" +
-                "Be concise but thorough, and always relate your answers to cinematic elements.";
-
-        String fullPrompt = systemPrompt + "\n\nUser Question: " + question;
-
-        JSONObject body = new JSONObject();
-        JSONArray contents = new JSONArray();
-        JSONObject content = new JSONObject();
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.put("text", fullPrompt);
-        parts.put(part);
-        content.put("parts", parts);
-        contents.put(content);
-        body.put("contents", contents);
-
         HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
-        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+
+        ResponseEntity<String> response =
+                restTemplate.postForEntity(url, entity, String.class);
 
         if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Gemini API request failed with status: " + response.getStatusCode());
+            throw new RuntimeException("Gemini API error: " + response.getBody());
         }
 
         JSONObject json = new JSONObject(response.getBody());
 
-        if (!json.has("candidates") || json.getJSONArray("candidates").length() == 0) {
-            throw new RuntimeException("Gemini API returned no candidates. Response: " + json.toString());
-        }
-
-        return json.getJSONArray("candidates")
+        return json
+                .getJSONArray("candidates")
                 .getJSONObject(0)
                 .getJSONObject("content")
                 .getJSONArray("parts")
@@ -139,61 +226,78 @@ public class AiController {
                 .getString("text");
     }
 
+    // --------------------------------------------------------------------
+    // 🎬 TMDB Search Logic (unchanged)
+    // --------------------------------------------------------------------
     private List<Map<String, Object>> extractMoviesFromText(String text) {
-        List<Map<String, Object>> movies = new ArrayList<>();
+        List<Map<String, Object>> resultsList = new ArrayList<>();
 
-        // Find quoted titles
-        List<String> candidates = new ArrayList<>();
-        String[] quoted = text.split("\"");
-        for (int i = 1; i < quoted.length; i += 2) {
-            candidates.add(quoted[i]);
+        List<String> titles = new ArrayList<>();
+        String[] parts = text.split("\"");
+
+        for (int i = 1; i < parts.length; i += 2) {
+            titles.add(parts[i]);
         }
 
-        if (candidates.isEmpty()) {
-            for (String word : text.split("\\s+")) {
-                if (Character.isUpperCase(word.charAt(0)) && word.length() > 3)
-                    candidates.add(word);
-            }
-        }
+        if (titles.isEmpty()) return resultsList;
 
-        for (String title : candidates) {
+        List<String> limited = titles.subList(0, Math.min(5, titles.size()));
+
+        for (String title : limited) {
             try {
-                String searchUrl = String.format(
+                String url = String.format(
                         "https://api.themoviedb.org/3/search/multi?api_key=%s&query=%s",
-                        tmdbKey, title.replace(" ", "%20"));
+                        tmdbKey, title.replace(" ", "%20")
+                );
 
-                String response = restTemplate.getForObject(searchUrl, String.class);
+                String response = restTemplate.getForObject(url, String.class);
                 JSONObject json = new JSONObject(response);
-                JSONArray results = json.getJSONArray("results");
 
-                if (results.length() > 0) {
-                    JSONObject movie = results.getJSONObject(0);
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("title", movie.optString("title", movie.optString("name", "Unknown")));
-                    m.put("rating", movie.optDouble("vote_average", 0));
-                    m.put("poster", "https://image.tmdb.org/t/p/w500" + movie.optString("poster_path", ""));
-                    m.put("url", "https://www.themoviedb.org/" + movie.optString("media_type", "movie") + "/" + movie.optInt("id"));
-                    movies.add(m);
-                }
-            } catch (Exception ignored) {}
+                JSONArray arr = json.getJSONArray("results");
+                if (arr.length() == 0) continue;
+
+                JSONObject item = arr.getJSONObject(0);
+
+                Map<String, Object> m = new HashMap<>();
+                m.put("title", item.optString("title", item.optString("name", "Unknown")));
+                m.put("rating", item.optDouble("vote_average", 0));
+                m.put("poster", "https://image.tmdb.org/t/p/w500" + item.optString("poster_path", ""));
+                m.put("url", "https://www.themoviedb.org/" + item.optString("media_type", "movie") + "/" + item.getInt("id"));
+
+                resultsList.add(m);
+
+            } catch (Exception ignore) {}
         }
 
-        return movies;
+        return resultsList;
     }
 
-    private String formatResponse(String text, List<Map<String, Object>> movies) {
-        text = text.replaceAll("(?m)^\\s*\\d+\\.\\s*", "• ");
-        text = text.replaceAll("(?m)^\\s*-\\s*", "• ");
-        StringBuilder sb = new StringBuilder("🎬 Here's what I found:\n\n").append(text.trim());
+    // --------------------------------------------------------------------
+    // 🆕 Session Management Endpoints
+    // --------------------------------------------------------------------
+    @PostMapping("/session/new")
+    public ResponseEntity<Map<String, String>> createNewSession() {
+        String newSessionId = "session_" + System.currentTimeMillis();
+        conversationSessions.put(newSessionId, new ArrayList<>());
+        return ResponseEntity.ok(Map.of("sessionId", newSessionId));
+    }
 
-        if (!movies.isEmpty()) {
-            sb.append("\n\n🎞 Related Titles:\n");
-            for (Map<String, Object> m : movies) {
-                sb.append("• [").append(m.get("title")).append("](").append(m.get("url")).append(") ")
-                        .append("⭐ ").append(m.get("rating")).append("\n");
-            }
-        }
+    @DeleteMapping("/session/{sessionId}")
+    public ResponseEntity<Map<String, String>> clearSession(@PathVariable String sessionId) {
+        conversationSessions.remove(sessionId);
+        return ResponseEntity.ok(Map.of("status", "Session cleared"));
+    }
 
-        return sb.toString();
+    // --------------------------------------------------------------------
+    // ❤️ Health check
+    // --------------------------------------------------------------------
+    @GetMapping("/health")
+    public Map<String, String> health() {
+        return Map.of(
+                "status", "OK",
+                "geminiConfigured", geminiKey != null ? "YES" : "NO",
+                "tmdbConfigured", tmdbKey != null ? "YES" : "NO",
+                "activeSessions", String.valueOf(conversationSessions.size())
+        );
     }
 }

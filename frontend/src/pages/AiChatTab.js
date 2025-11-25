@@ -1,6 +1,11 @@
 // src/pages/AiChatTab.js
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Film, Zap, Lightbulb, TrendingUp, Heart, Search, MessageCircle, RefreshCw, History, Trash2, Plus } from "lucide-react";
+import {
+    Send, Bot, User, Sparkles, Loader2, Film, Zap, Lightbulb,
+    TrendingUp, Heart, Search, MessageCircle, RefreshCw, History,
+    Trash2, Plus, Copy, Check, Edit, Download, Mic, MicOff,
+    ThumbsUp, Search as SearchIcon, X, Save, Clock, Star
+} from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
@@ -16,10 +21,22 @@ export default function AiChatTab() {
     const [question, setQuestion] = useState("");
     const [chat, setChat] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState("checking"); // checking, connected, error
+    const [connectionStatus, setConnectionStatus] = useState("checking");
     const [showHistory, setShowHistory] = useState(false);
+    const [showLiked, setShowLiked] = useState(false);
     const [chatHistory, setChatHistory] = useState([]);
+    const [copiedMessageId, setCopiedMessageId] = useState(null);
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editText, setEditText] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isListening, setIsListening] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [streamingMessageId, setStreamingMessageId] = useState(null);
+    const [retryCount, setRetryCount] = useState(0);
+    const [messageLikes, setMessageLikes] = useState({});
+
     const chatEndRef = useRef(null);
+    const recognitionRef = useRef(null);
     const { theme } = useTheme();
     const { currentUser } = useAuth();
 
@@ -57,6 +74,32 @@ export default function AiChatTab() {
         }
     ];
 
+    // Initialize speech recognition
+    useEffect(() => {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = false;
+            recognitionRef.current.interimResults = false;
+            recognitionRef.current.lang = 'en-US';
+
+            recognitionRef.current.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                setQuestion(prev => prev + (prev ? ' ' : '') + transcript);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsListening(false);
+            };
+        }
+    }, []);
+
     // Check backend connection on component mount
     useEffect(() => {
         checkBackendConnection();
@@ -66,57 +109,114 @@ export default function AiChatTab() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [chat]);
 
-    // Load chat history when user logs in
+    // Load chat history and liked messages when user logs in or component mounts
     useEffect(() => {
         if (currentUser) {
+            console.log("👤 User logged in, loading data...");
             loadChatHistory();
+            loadLikedMessages();
         } else {
+            console.log("👤 No user logged in, clearing data");
             setChatHistory([]);
+            setMessageLikes({});
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]);
 
     // Save chat to history after each message (only for logged-in users)
-    // Debounced to prevent duplicate saves
     useEffect(() => {
         if (currentUser && chat.length > 0) {
             const timeoutId = setTimeout(() => {
                 saveChatToHistory();
-            }, 1000); // Wait 1 second before saving to avoid duplicates
+            }, 1000);
             return () => clearTimeout(timeoutId);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chat, currentUser]);
 
     const loadChatHistory = async () => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.log("❌ No user, cannot load history");
+            return;
+        }
 
         try {
+            console.log("📥 Loading chat history from Firebase...");
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             const historySnap = await getDoc(historyRef);
 
             if (historySnap.exists()) {
                 const data = historySnap.data();
-                setChatHistory(data.sessions || []);
+                const sessions = data.sessions || [];
+                setChatHistory(sessions);
+                console.log("✅ Loaded chat history:", sessions.length, "sessions");
+                console.log("📋 Session previews:", sessions.map(s => s.preview));
+            } else {
+                console.log("📥 No chat history found in Firebase");
+                setChatHistory([]);
             }
         } catch (error) {
-            console.error("Error loading chat history:", error);
+            console.error("❌ Error loading chat history:", error);
+        }
+    };
+
+    const loadLikedMessages = async () => {
+        if (!currentUser) {
+            console.log("❌ No user, cannot load likes");
+            return;
+        }
+
+        try {
+            console.log("📥 Loading liked messages from Firebase...");
+            const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
+            const likesSnap = await getDoc(likesRef);
+
+            if (likesSnap.exists()) {
+                const data = likesSnap.data();
+                console.log("✅ Loaded liked messages from Firebase:", Object.keys(data).filter(k => data[k]).length);
+                setMessageLikes(data);
+            } else {
+                console.log("📥 No liked messages found in Firebase");
+                setMessageLikes({});
+            }
+        } catch (error) {
+            console.error("❌ Error loading liked messages:", error);
+        }
+    };
+
+    const saveLikedMessages = async (newLikes) => {
+        if (!currentUser) {
+            console.log("❌ No user, cannot save likes");
+            return;
+        }
+
+        try {
+            console.log("💾 Saving liked messages to Firebase...");
+            const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
+            await setDoc(likesRef, newLikes);
+            console.log("✅ Liked messages saved to Firebase");
+        } catch (error) {
+            console.error("❌ Error saving liked messages:", error);
         }
     };
 
     const saveChatToHistory = async () => {
-        if (!currentUser || chat.length === 0) return;
+        if (!currentUser || chat.length === 0) {
+            console.log("❌ Cannot save: no user or empty chat");
+            return;
+        }
 
         try {
+            console.log("💾 Saving chat to history...");
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             const historySnap = await getDoc(historyRef);
 
             let sessions = [];
             if (historySnap.exists()) {
                 sessions = historySnap.data().sessions || [];
+                console.log("📋 Existing sessions:", sessions.length);
             }
 
-            // Find existing session by matching first user message text
             const firstUserMessage = chat.find(msg => msg.sender === "user");
             const existingIndex = sessions.findIndex(s => {
                 const firstMsg = s.messages.find(msg => msg.sender === "user");
@@ -124,32 +224,66 @@ export default function AiChatTab() {
             });
 
             const session = {
-                id: existingIndex >= 0 ? sessions[existingIndex].id : Date.now(),
-                messages: chat,
+                id: existingIndex >= 0 ? sessions[existingIndex].id : Date.now().toString(),
+                messages: chat.map(msg => ({
+                    ...msg,
+                    timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+                })),
                 timestamp: new Date().toISOString(),
-                preview: firstUserMessage?.text?.substring(0, 50) || "New conversation"
+                preview: firstUserMessage?.text?.substring(0, 50) + "..." || "New conversation"
             };
 
             if (existingIndex >= 0) {
-                // Update existing session
                 sessions[existingIndex] = session;
+                console.log("📝 Updated existing session:", session.preview);
             } else {
-                // Add new session at the beginning
                 sessions.unshift(session);
                 // Keep only last 20 sessions
                 sessions = sessions.slice(0, 20);
+                console.log("📝 Created new session:", session.preview);
             }
 
             await setDoc(historyRef, { sessions });
             setChatHistory(sessions);
+            console.log("✅ History saved to Firebase. Total sessions:", sessions.length);
         } catch (error) {
-            console.error("Error saving chat history:", error);
+            console.error("❌ Error saving chat history:", error);
         }
     };
 
     const loadHistorySession = (session) => {
-        setChat(session.messages);
+        // Convert timestamp strings back to Date objects
+        const messagesWithDates = session.messages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+        }));
+
+        setChat(messagesWithDates);
         setShowHistory(false);
+        setShowLiked(false);
+        console.log("📂 Loaded session from history:", session.preview);
+    };
+
+    const loadLikedMessage = (messageId) => {
+        console.log("⭐ Looking for liked message:", messageId);
+
+        // Find the message in chat history
+        for (const session of chatHistory) {
+            const message = session.messages.find(msg => msg.id === messageId);
+            if (message) {
+                // Convert timestamp back to Date object
+                const messageWithDate = {
+                    ...message,
+                    timestamp: new Date(message.timestamp)
+                };
+                setChat([messageWithDate]);
+                setShowLiked(false);
+                setShowHistory(false);
+                console.log("✅ Loaded liked message from history");
+                return;
+            }
+        }
+        console.log("❌ Liked message not found in history:", messageId);
     };
 
     const deleteHistorySession = async (sessionId) => {
@@ -160,8 +294,23 @@ export default function AiChatTab() {
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             await setDoc(historyRef, { sessions: updatedSessions });
             setChatHistory(updatedSessions);
+            console.log("🗑️ Deleted session:", sessionId);
         } catch (error) {
             console.error("Error deleting session:", error);
+        }
+    };
+
+    const deleteLikedMessage = async (messageId) => {
+        if (!currentUser) return;
+
+        try {
+            const newLikes = { ...messageLikes };
+            delete newLikes[messageId];
+            await saveLikedMessages(newLikes);
+            setMessageLikes(newLikes);
+            console.log("🗑️ Removed liked message:", messageId);
+        } catch (error) {
+            console.error("Error deleting liked message:", error);
         }
     };
 
@@ -173,8 +322,24 @@ export default function AiChatTab() {
                 const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
                 await deleteDoc(historyRef);
                 setChatHistory([]);
+                console.log("🧹 Cleared all chat history");
             } catch (error) {
                 console.error("Error clearing history:", error);
+            }
+        }
+    };
+
+    const clearAllLikes = async () => {
+        if (!currentUser) return;
+
+        if (window.confirm("Are you sure you want to clear all liked messages?")) {
+            try {
+                const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
+                await deleteDoc(likesRef);
+                setMessageLikes({});
+                console.log("🧹 Cleared all liked messages");
+            } catch (error) {
+                console.error("Error clearing likes:", error);
             }
         }
     };
@@ -182,231 +347,357 @@ export default function AiChatTab() {
     const startNewChat = () => {
         setChat([]);
         setShowHistory(false);
+        setShowLiked(false);
+        setEditingMessageId(null);
+        setSearchTerm("");
+        console.log("🆕 Started new chat");
     };
 
     const checkBackendConnection = async () => {
         setConnectionStatus("checking");
         const healthUrl = `${API_BASE_URL}/api/health`;
-        console.log("🔍 Checking backend connection at:", healthUrl);
-        
+
         try {
             const response = await fetch(healthUrl, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
             });
 
             if (response.ok) {
-                const data = await response.json();
                 setConnectionStatus("connected");
-                console.log("✅ Backend connected successfully:", data);
+                setRetryCount(0);
+                console.log("✅ Backend connected successfully");
             } else {
                 setConnectionStatus("error");
-                console.error("❌ Backend health check failed with status:", response.status);
+                console.error("❌ Backend health check failed");
             }
         } catch (error) {
             console.error('❌ Backend connection failed:', error);
-            console.error('   Attempted URL:', healthUrl);
             setConnectionStatus("error");
         }
     };
 
-    // Call your backend API
-    const callBackendAI = async (userQuestion) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    question: userQuestion
-                })
-            });
+    // Enhanced backend call with session ID
+    const callBackendAI = async (userQuestion, isRegeneration = false) => {
+        const maxRetries = 3;
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const requestBody = {
+                    question: userQuestion,
+                    sessionId: currentUser?.uid || 'default',
+                    ...(isRegeneration && { variation: attempt })
+                };
+
+                console.log("🤖 Sending request to backend:", { isRegeneration, variation: attempt });
+                const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                    signal: AbortSignal.timeout(30000)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                setRetryCount(0);
+                return data;
+            } catch (error) {
+                console.error(`Attempt ${attempt} failed:`, error);
+
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             }
-
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error calling backend AI:', error);
-            throw error;
         }
     };
 
-    const sendMessage = async () => {
-        if (!question.trim()) return;
+    // Fixed streaming response simulation
+    const streamResponse = async (text, messageId) => {
+        setIsStreaming(true);
+        setStreamingMessageId(messageId);
 
-        const userMessage = { sender: "user", text: question, timestamp: new Date() };
-        const newChat = [...chat, userMessage];
-        setChat(newChat);
-        setQuestion("");
+        const words = text.split(' ');
+        let displayedText = '';
 
-        // Only show loading if backend is connected
-        if (connectionStatus === "connected") {
-            setLoading(true);
-            
-            try {
-                // Call your backend API
-                const aiResponse = await callBackendAI(question);
+        // Use for...of loop to avoid unsafe function reference
+        for (const word of words) {
+            if (!isStreaming) break; // Allow cancellation
 
-                setChat([
-                    ...newChat,
-                    {
-                        sender: "ai",
-                        text: aiResponse.answer,
-                        movies: aiResponse.movies || [],
-                        timestamp: new Date()
-                    },
-                ]);
+            displayedText += (displayedText === '' ? '' : ' ') + word;
+
+            // Use functional update to avoid closure issues
+            setChat(prevChat => prevChat.map(msg =>
+                msg.id === messageId ? { ...msg, text: displayedText } : msg
+            ));
+
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
+        }
+
+        setIsStreaming(false);
+        setStreamingMessageId(null);
+    };
+
+    const copyToClipboard = async (text, messageId) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedMessageId(messageId);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setCopiedMessageId(messageId);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+        }
+    };
+
+    // Message editing functionality
+    const startEditing = (messageId, currentText) => {
+        setEditingMessageId(messageId);
+        setEditText(currentText);
+    };
+
+    const saveEdit = async () => {
+        if (!editText.trim()) return;
+
+        setChat(chat.map(msg =>
+            msg.id === editingMessageId ? { ...msg, text: editText } : msg
+        ));
+
+        setEditingMessageId(null);
+        setEditText("");
+    };
+
+    const cancelEdit = () => {
+        setEditingMessageId(null);
+        setEditText("");
+    };
+
+    // Voice input functionality
+    const toggleVoiceInput = () => {
+        if (!recognitionRef.current) {
+            alert("Speech recognition not supported in your browser");
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        } else {
+            recognitionRef.current.start();
+            setIsListening(true);
+        }
+    };
+
+    // Export conversation
+    const exportConversation = (format = 'txt') => {
+        if (chat.length === 0) {
+            alert("No conversation to export");
+            return;
+        }
+
+        const conversation = chat.map(msg =>
+            `${msg.sender.toUpperCase()} (${formatTimestamp(msg.timestamp)}): ${msg.text}`
+        ).join('\n\n');
+
+        if (format === 'txt') {
+            const blob = new Blob([conversation], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cinecoolai-chat-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    };
+
+    // Like functionality with immediate feedback
+    const toggleLike = async (messageId) => {
+        const newLikedState = !messageLikes[messageId];
+        const newLikes = {
+            ...messageLikes,
+            [messageId]: newLikedState
+        };
+
+        setMessageLikes(newLikes);
+
+        console.log(`❤️ ${newLikedState ? 'Liked' : 'Unliked'} message:`, messageId);
+
+        if (currentUser) {
+            await saveLikedMessages(newLikes);
+        }
+    };
+
+    // FIXED: Regenerate response functionality with variation
+    const regenerateResponse = async (aiMessageId) => {
+        // Find the user message that prompted this AI response
+        const aiMessageIndex = chat.findIndex(msg => msg.id === aiMessageId);
+        if (aiMessageIndex === -1) return;
+
+        // Find the previous user message
+        let userMessageIndex = aiMessageIndex - 1;
+        while (userMessageIndex >= 0 && chat[userMessageIndex].sender !== "user") {
+            userMessageIndex--;
+        }
+
+        if (userMessageIndex === -1) return;
+        const userMessage = chat[userMessageIndex];
+
+        setLoading(true);
+
+        try {
+            // Remove the existing AI response
+            const chatWithoutAIResponse = chat.slice(0, aiMessageIndex);
+            setChat(chatWithoutAIResponse);
+
+            // Call AI with the original user question and regeneration flag
+            const aiResponse = await callBackendAI(userMessage.text, true);
+            const newAIMessage = {
+                sender: "ai",
+                text: aiResponse.answer,
+                movies: aiResponse.movies || [],
+                timestamp: new Date(),
+                id: Date.now() + Math.random()
+            };
+
+            setChat([...chatWithoutAIResponse, newAIMessage]);
+            await streamResponse(aiResponse.answer, newAIMessage.id);
+
         } catch (error) {
-                console.error('AI request failed:', error);
-                // Use fallback response when backend fails
-                handleFallbackResponse(newChat, question);
+            console.error('Regeneration failed:', error);
+            setRetryCount(prev => prev + 1);
+
+            // Fallback response
+            const fallbackMessage = {
+                sender: "ai",
+                text: "I encountered an error while regenerating the response. Please try again.",
+                movies: [],
+                timestamp: new Date(),
+                id: Date.now() + Math.random()
+            };
+            setChat([...chat.slice(0, aiMessageIndex), fallbackMessage]);
+            await streamResponse(fallbackMessage.text, fallbackMessage.id);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Filter history based on search
+    const filteredHistory = chatHistory.filter(session =>
+        session.messages.some(msg =>
+            msg.text.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        session.preview.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Get liked messages with their full content
+    const getLikedMessagesWithContent = () => {
+        const likedWithContent = [];
+
+        // Check current chat first
+        chat.forEach(message => {
+            if (messageLikes[message.id] && message.sender === "ai") {
+                likedWithContent.push({
+                    ...message,
+                    sessionPreview: "Current conversation",
+                    sessionTimestamp: message.timestamp
+                });
+            }
+        });
+
+        // Then check history
+        chatHistory.forEach(session => {
+            session.messages.forEach(message => {
+                if (messageLikes[message.id] && message.sender === "ai" &&
+                    !likedWithContent.some(liked => liked.id === message.id)) {
+                    likedWithContent.push({
+                        ...message,
+                        sessionPreview: session.preview,
+                        sessionTimestamp: session.timestamp
+                    });
+                }
+            });
+        });
+
+        console.log("📋 Found liked messages with content:", likedWithContent.length);
+        return likedWithContent.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    };
+
+    const likedMessagesWithContent = getLikedMessagesWithContent();
+
+    const sendMessage = async (customQuestion = null, isRetry = false) => {
+        const messageText = customQuestion || question;
+        if (!messageText.trim()) return;
+
+        const userMessage = {
+            sender: "user",
+            text: messageText,
+            timestamp: new Date(),
+            id: Date.now() + Math.random()
+        };
+
+        const newChat = [...chat, userMessage];
+        setChat(newChat);
+
+        if (!isRetry) {
+            setQuestion("");
+        }
+
+        if (connectionStatus === "connected") {
+            setLoading(true);
+
+            try {
+                const aiResponse = await callBackendAI(messageText);
+                const aiMessage = {
+                    sender: "ai",
+                    text: aiResponse.answer,
+                    movies: aiResponse.movies || [],
+                    timestamp: new Date(),
+                    id: Date.now() + Math.random()
+                };
+
+                setChat([...newChat, aiMessage]);
+
+                // Start streaming effect
+                await streamResponse(aiResponse.answer, aiMessage.id);
+
+            } catch (error) {
+                console.error('AI request failed:', error);
+                setRetryCount(prev => prev + 1);
+                handleFallbackResponse(newChat, messageText);
+            } finally {
+                setLoading(false);
             }
         } else {
-            // Use immediate fallback response when backend is offline
-            handleFallbackResponse(newChat, question);
+            handleFallbackResponse(newChat, messageText);
         }
     };
 
     const handleFallbackResponse = (newChat, userQuestion) => {
-        const fallbackResponse = "I'm currently unable to connect to the backend server. Please make sure the backend is running on " + API_BASE_URL + " and try again.";
-        
-        setChat([
-            ...newChat,
-            {
-                sender: "ai",
-                text: fallbackResponse,
-                movies: [],
-                timestamp: new Date()
-            },
-        ]);
-    };
+        const fallbackResponse = "I'm currently unable to connect to the backend server. Please make sure the backend is running and try again. You can also try reconnecting using the button above.";
 
-    // Fallback movie data when backend fails (currently unused but kept for future use)
-    // eslint-disable-next-line no-unused-vars
-    const getFallbackMovies = (userQuestion) => {
-        const lowerQuestion = userQuestion.toLowerCase();
+        const aiMessage = {
+            sender: "ai",
+            text: fallbackResponse,
+            movies: [],
+            timestamp: new Date(),
+            id: Date.now() + Math.random()
+        };
 
-        if (lowerQuestion.includes('breaking bad') || lowerQuestion.includes('walter white')) {
-            return [
-                {
-                    title: "Breaking Bad",
-                    rating: 9.5,
-                    poster: "https://image.tmdb.org/t/p/w500/3xnWaLQjelJDDF7LT1WBo6f4BRe.jpg",
-                    url: "https://www.themoviedb.org/tv/1396-breaking-bad"
-                },
-                {
-                    title: "Better Call Saul",
-                    rating: 9.0,
-                    poster: "https://image.tmdb.org/t/p/w500/fA2nptCpQjJ1XBx0dF6izzxHv6d.jpg",
-                    url: "https://www.themoviedb.org/tv/60059-better-call-saul"
-                },
-                {
-                    title: "The Sopranos",
-                    rating: 9.2,
-                    poster: "https://image.tmdb.org/t/p/w500/icmmSD4vTTt0pD2h1rGMdNSVUu.jpg",
-                    url: "https://www.themoviedb.org/tv/1398-the-sopranos"
-                }
-            ];
-        }
-
-        if (lowerQuestion.includes('mentalist') || lowerQuestion.includes('patrick jane') || lowerQuestion.includes('monk') || lowerQuestion.includes('lie to me')) {
-            return [
-                {
-                    title: "The Mentalist",
-                    rating: 8.1,
-                    poster: "https://image.tmdb.org/t/p/w500/3dPhS4pJBEcR3y6aZ3MBBzSb2Mo.jpg",
-                    url: "https://www.themoviedb.org/tv/824-mentalist"
-                },
-                {
-                    title: "Monk",
-                    rating: 8.2,
-                    poster: "https://image.tmdb.org/t/p/w500/lJScdX2EP5OHdbVx3G4dfpjvSaT.jpg",
-                    url: "https://www.themoviedb.org/tv/1695-monk"
-                },
-                {
-                    title: "Lie to Me",
-                    rating: 8.0,
-                    poster: "https://image.tmdb.org/t/p/w500/4yeVWoxfvKXwK44pfaKvkcwmaLh.jpg",
-                    url: "https://www.themoviedb.org/tv/832-lie-to-me"
-                }
-            ];
-        }
-
-        if (lowerQuestion.includes('naruto') || lowerQuestion.includes('sasuke') || lowerQuestion.includes('anime')) {
-            return [
-                {
-                    title: "Naruto: Shippuden",
-                    rating: 8.7,
-                    poster: "https://image.tmdb.org/t/p/w500/zxC3HFREH4nAthLdLqYGbrrvEOI.jpg",
-                    url: "https://www.themoviedb.org/tv/4629-naruto-shippuden"
-                },
-                {
-                    title: "Attack on Titan",
-                    rating: 9.1,
-                    poster: "https://image.tmdb.org/t/p/w500/huco9pXbOxzP8xKYZPdR2LqXpUq.jpg",
-                    url: "https://www.themoviedb.org/tv/1429-attack-on-titan"
-                },
-                {
-                    title: "Death Note",
-                    rating: 8.9,
-                    poster: "https://image.tmdb.org/t/p/w500/iigTJJskR1PcjjXqxdyJwVB3BoU.jpg",
-                    url: "https://www.themoviedb.org/tv/13916-death-note"
-                }
-            ];
-        }
-
-        if (lowerQuestion.includes('game of thrones') || lowerQuestion.includes('got')) {
-            return [
-                {
-                    title: "Game of Thrones",
-                    rating: 9.3,
-                    poster: "https://image.tmdb.org/t/p/w500/7WUHnWGx5OO145IRxPDUkQSh4C7.jpg",
-                    url: "https://www.themoviedb.org/tv/1399-game-of-thrones"
-                },
-                {
-                    title: "House of the Dragon",
-                    rating: 8.8,
-                    poster: "https://image.tmdb.org/t/p/w500/z2yahl2uefxDCl0nogcRBstwruJ.jpg",
-                    url: "https://www.themoviedb.org/tv/94997-house-of-the-dragon"
-                },
-                {
-                    title: "The Last of Us",
-                    rating: 8.8,
-                    poster: "https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg",
-                    url: "https://www.themoviedb.org/tv/100088-the-last-of-us"
-                }
-            ];
-        }
-
-        // Default fallback movies
-        return [
-            {
-                title: "Breaking Bad",
-                rating: 9.5,
-                poster: "https://image.tmdb.org/t/p/w500/3xnWaLQjelJDDF7LT1WBo6f4BRe.jpg",
-                url: "https://www.themoviedb.org/tv/1396-breaking-bad"
-            },
-            {
-                title: "Game of Thrones",
-                rating: 9.3,
-                poster: "https://image.tmdb.org/t/p/w500/7WUHnWGx5OO145IRxPDUkQSh4C7.jpg",
-                url: "https://www.themoviedb.org/tv/1399-game-of-thrones"
-            },
-            {
-                title: "Stranger Things",
-                rating: 8.7,
-                poster: "https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg",
-                url: "https://www.themoviedb.org/tv/66732-stranger-things"
-            }
-        ];
+        setChat([...newChat, aiMessage]);
+        streamResponse(fallbackResponse, aiMessage.id);
     };
 
     const handleKey = (e) => {
@@ -423,7 +714,15 @@ export default function AiChatTab() {
         });
     };
 
-    // Enhanced text renderer matching the example format
+    const formatDate = (date) => {
+        return new Date(date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
+    // Enhanced text renderer
     const renderText = (text) => {
         if (!text) {
             const textColor = theme === 'dark' ? 'text-gray-300' : 'text-gray-700';
@@ -438,26 +737,22 @@ export default function AiChatTab() {
 
         lines.forEach((line, i) => {
             const trimmedLine = line.trim();
-            
-            // Handle separators (---)
+
             if (trimmedLine === '---' || trimmedLine.match(/^-{3,}$/)) {
                 formattedLines.push(
                     <div key={i} className={`my-4 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'}`}></div>
                 );
                 return;
             }
-            
-            // Skip empty lines
+
             if (!trimmedLine) {
                 formattedLines.push(<div key={i} className="my-1"></div>);
                 return;
             }
 
-            // Check for numbered list items with emoji (💥 **1. *Title** or 💥 2. *Title*)
             const numberedWithEmoji = /^([🎬🎞📺💡🎯🍿⭐🎭🎪🎨🎪🎬📽️🎥🎬💥🔸🌟🧠🕵️‍♂️🎩🔍💉🔥💻🕶️🧩])\s*\*?\*?(\d+)\.\s*\*?(.+?)\*?\*?$/.exec(trimmedLine);
             if (numberedWithEmoji) {
                 const [, emoji, num, title] = numberedWithEmoji;
-                // Clean up any remaining asterisks from title
                 const cleanTitle = title.replace(/^\*+|\*+$/g, '');
                 formattedLines.push(
                     <div key={i} className={`${titleColor} font-bold my-4 text-lg leading-relaxed`}>
@@ -467,7 +762,6 @@ export default function AiChatTab() {
                 return;
             }
 
-            // Check for emoji + bold title pattern (💥 **Title**)
             const emojiBoldTitle = /^([🎬🎞📺💡🎯🍿⭐🎭🎪🎨🎪🎬📽️🎥🎬💥🔸🌟🧠🕵️‍♂️🎩🔍💉🔥💻🕶️🧩])\s*\*\*(.+?)\*\*/.exec(trimmedLine);
             if (emojiBoldTitle) {
                 const [, emoji, title] = emojiBoldTitle;
@@ -479,7 +773,6 @@ export default function AiChatTab() {
                 return;
             }
 
-            // Check for italic subtitle (🧠 *When reading faces...*)
             const emojiItalicSubtitle = /^([🎬🎞📺💡🎯🍿⭐🎭🎪🎨🎪🎬📽️🎥🎬💥🔸🌟🧠🕵️‍♂️🎩🔍💉🔥💻🕶️🧩])\s*\*(.+?)\*$/.exec(trimmedLine);
             if (emojiItalicSubtitle && trimmedLine.length < 100) {
                 const [, emoji, subtitle] = emojiItalicSubtitle;
@@ -491,7 +784,6 @@ export default function AiChatTab() {
                 return;
             }
 
-            // Check for main title (starts with emoji or bold)
             if (/^\*\*/.test(trimmedLine) || /^[🎬🎞📺💡🎯🍿⭐🎭🎪🎨🎪🎬📽️🎥🎬💥🔸🌟]/.test(trimmedLine)) {
                 formattedLines.push(
                     <div key={i} className={`${titleColor} font-bold my-4 text-lg leading-relaxed`}>
@@ -501,7 +793,6 @@ export default function AiChatTab() {
                 return;
             }
 
-            // Bullet points (🔸 or •)
             if (/^[🔸•-]/.test(trimmedLine)) {
                 const bulletColor = theme === 'dark' ? 'text-purple-400' : 'text-purple-600';
                 formattedLines.push(
@@ -513,7 +804,6 @@ export default function AiChatTab() {
                 return;
             }
 
-            // Regular text
             formattedLines.push(
                 <div key={i} className={`${textColor} my-2 leading-relaxed`}>
                     {formatInlineFormatting(trimmedLine)}
@@ -524,35 +814,28 @@ export default function AiChatTab() {
         return formattedLines;
     };
 
-    // Helper function to format inline markdown (bold, italic, emojis)
     const formatInlineFormatting = (line) => {
-        // Clean up any malformed asterisks (e.g., *** or ****)
         let cleanedLine = line.replace(/\*{3,}/g, '**');
-
-        // Process bold (**text**), italic (*text*), and preserve emojis
         const parts = cleanedLine.split(/(\*\*.*?\*\*|\*[^*\n]+?\*)/g);
 
         return parts.map((part, idx) => {
-            // Bold text (**text**)
             if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
                 const boldText = part.slice(2, -2);
                 const boldColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
                 return <strong key={idx} className={`${boldColor} font-bold`}>{boldText}</strong>;
             }
-            // Italic text (*text*)
             if (part.startsWith('*') && part.endsWith('*') && part.length > 2 && !part.startsWith('**')) {
                 const italicText = part.slice(1, -1);
                 const italicColor = theme === 'dark' ? 'text-gray-200' : 'text-gray-700';
                 return <em key={idx} className={`${italicColor} italic`}>{italicText}</em>;
             }
-            // Regular text (preserves emojis)
             return <span key={idx}>{part}</span>;
         });
     };
 
     // Theme-aware styles
-    const bgGradient = theme === 'dark' 
-        ? 'bg-gradient-to-br from-gray-900 to-gray-950' 
+    const bgGradient = theme === 'dark'
+        ? 'bg-gradient-to-br from-gray-900 to-gray-950'
         : 'bg-gradient-to-br from-gray-50 to-blue-50';
     const headerBg = theme === 'dark'
         ? 'bg-gray-800/50 backdrop-blur-lg border-b border-gray-700'
@@ -604,11 +887,8 @@ export default function AiChatTab() {
                                         <Zap className={`w-3 h-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
                                         <span className={`text-xs font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Movie & TV Expert</span>
                                     </div>
-                                    {/* Connection Status Dot */}
-                                    <div className="flex items-center gap-1.5" title={
-                                        connectionStatus === 'connected' ? 'Backend Connected' :
-                                        connectionStatus === 'error' ? 'Backend Disconnected' : 'Connecting...'
-                                    }>
+                                    {/* Connection Status */}
+                                    <div className="flex items-center gap-1.5">
                                         <div className={`w-2 h-2 rounded-full ${
                                             connectionStatus === 'connected'
                                                 ? 'bg-green-500 shadow-lg shadow-green-500/50'
@@ -626,7 +906,7 @@ export default function AiChatTab() {
                                             {connectionStatus === 'connected'
                                                 ? 'Connected'
                                                 : connectionStatus === 'error'
-                                                    ? 'Backend Offline'
+                                                    ? `Backend Offline${retryCount > 0 ? ` (Retry ${retryCount})` : ''}`
                                                     : 'Checking Connection'}
                                         </span>
                                     </div>
@@ -634,6 +914,21 @@ export default function AiChatTab() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {/* Export Button */}
+                            {chat.length > 0 && (
+                                <button
+                                    onClick={() => exportConversation('txt')}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                        theme === 'dark'
+                                            ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
+                                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-600'
+                                    }`}
+                                    title="Export conversation"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Export
+                                </button>
+                            )}
                             {/* New Chat Button */}
                             <button
                                 onClick={startNewChat}
@@ -647,10 +942,32 @@ export default function AiChatTab() {
                                 <Plus className="w-4 h-4" />
                                 New Chat
                             </button>
-                            {/* History Button - Only show when logged in */}
+                            {/* Liked Button */}
                             {currentUser && (
                                 <button
-                                    onClick={() => setShowHistory(!showHistory)}
+                                    onClick={() => {
+                                        setShowLiked(!showLiked);
+                                        setShowHistory(false);
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                        showLiked
+                                            ? 'bg-yellow-500/30 text-yellow-400'
+                                            : theme === 'dark'
+                                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                                : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
+                                    }`}
+                                >
+                                    <Star className="w-4 h-4" />
+                                    Liked ({likedMessagesWithContent.length})
+                                </button>
+                            )}
+                            {/* History Button */}
+                            {currentUser && (
+                                <button
+                                    onClick={() => {
+                                        setShowHistory(!showHistory);
+                                        setShowLiked(false);
+                                    }}
                                     className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
                                         showHistory
                                             ? 'bg-purple-500/30 text-purple-400'
@@ -682,66 +999,164 @@ export default function AiChatTab() {
             </div>
 
             <div className="flex-1 flex max-w-7xl mx-auto w-full p-4 gap-6">
-                {/* History Sidebar - Only show when logged in and history is open */}
-                {currentUser && showHistory && (
+                {/* History/Liked Sidebar */}
+                {(currentUser && (showHistory || showLiked)) && (
                     <div className={`w-80 ${sidebarBg} rounded-2xl p-4 overflow-y-auto`}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className={`font-semibold ${titleColor} flex items-center gap-2`}>
-                                <History className="w-5 h-5" />
-                                Chat History
+                                {showLiked ? <Star className="w-5 h-5" /> : <History className="w-5 h-5" />}
+                                {showLiked ? 'Liked Responses' : 'Chat History'}
                             </h3>
-                            {chatHistory.length > 0 && (
-                                <button
-                                    onClick={clearAllHistory}
-                                    className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                                    title="Clear all history"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {((showLiked && likedMessagesWithContent.length > 0) ||
+                                    (showHistory && chatHistory.length > 0)) && (
+                                    <button
+                                        onClick={showLiked ? clearAllLikes : clearAllHistory}
+                                        className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                        title={`Clear all ${showLiked ? 'likes' : 'history'}`}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
-                        {chatHistory.length === 0 ? (
-                            <div className={`text-center py-8 ${textSecondary}`}>
-                                <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">No chat history yet</p>
-                                <p className="text-xs mt-1">Start a conversation!</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {chatHistory.map((session) => (
-                                    <div
-                                        key={session.id}
-                                        className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                                            theme === 'dark'
-                                                ? 'bg-gray-700/30 hover:bg-gray-700/50 border-gray-600/30'
-                                                : 'bg-white/60 hover:bg-white border-gray-200/60'
-                                        }`}
+                        {/* Search Bar */}
+                        {(showHistory && chatHistory.length > 0) && (
+                            <div className="relative mb-4">
+                                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search conversations..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
+                                        theme === 'dark'
+                                            ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
+                                            : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500'
+                                    } focus:outline-none focus:border-purple-500`}
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                     >
-                                        <div
-                                            onClick={() => loadHistorySession(session)}
-                                            className="flex-1"
-                                        >
-                                            <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
-                                                {session.preview}
-                                            </p>
-                                            <p className={`text-xs ${textSecondary}`}>
-                                                {new Date(session.timestamp).toLocaleDateString()} • {session.messages.length} messages
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteHistorySession(session.id);
-                                            }}
-                                            className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                                            title="Delete session"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
+                        )}
+
+                        {showLiked ? (
+                            likedMessagesWithContent.length === 0 ? (
+                                <div className={`text-center py-8 ${textSecondary}`}>
+                                    <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">No liked responses yet</p>
+                                    <p className="text-xs mt-1">Click the like button on any AI response to save it here</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {likedMessagesWithContent.map((message) => (
+                                        <div
+                                            key={message.id}
+                                            className={`p-3 rounded-xl transition-all border ${
+                                                theme === 'dark'
+                                                    ? 'bg-gray-700/30 border-gray-600/30'
+                                                    : 'bg-white/60 border-gray-200/60'
+                                            }`}
+                                        >
+                                            <div
+                                                onClick={() => loadLikedMessage(message.id)}
+                                                className="flex-1 cursor-pointer"
+                                            >
+                                                <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
+                                                    {message.text.substring(0, 80)}...
+                                                </p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className={`text-xs ${textSecondary}`}>
+                                                        {formatDate(message.timestamp)}
+                                                    </p>
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                                        <span className="text-xs text-yellow-500">Liked</span>
+                                                    </div>
+                                                </div>
+                                                {message.sessionPreview && (
+                                                    <p className={`text-xs ${textSecondary} mt-1`}>
+                                                        From: {message.sessionPreview}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteLikedMessage(message.id);
+                                                }}
+                                                className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                                title="Remove from liked"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            filteredHistory.length === 0 ? (
+                                <div className={`text-center py-8 ${textSecondary}`}>
+                                    {searchTerm ? (
+                                        <>
+                                            <SearchIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No conversations found</p>
+                                            <p className="text-xs mt-1">Try different search terms</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                            <p className="text-sm">No chat history yet</p>
+                                            <p className="text-xs mt-1">Start a conversation!</p>
+                                        </>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {filteredHistory.map((session) => (
+                                        <div
+                                            key={session.id}
+                                            className={`p-3 rounded-xl cursor-pointer transition-all border ${
+                                                theme === 'dark'
+                                                    ? 'bg-gray-700/30 hover:bg-gray-700/50 border-gray-600/30'
+                                                    : 'bg-white/60 hover:bg-white border-gray-200/60'
+                                            }`}
+                                        >
+                                            <div
+                                                onClick={() => loadHistorySession(session)}
+                                                className="flex-1"
+                                            >
+                                                <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
+                                                    {session.preview}
+                                                </p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className={`text-xs ${textSecondary}`}>
+                                                        {new Date(session.timestamp).toLocaleDateString()} • {session.messages.length} messages
+                                                    </p>
+                                                    <Clock className="w-3 h-3 text-gray-400" />
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteHistorySession(session.id);
+                                                }}
+                                                className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                                title="Delete session"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
                         )}
                     </div>
                 )}
@@ -777,7 +1192,6 @@ export default function AiChatTab() {
                                         </div>
                                     </div>
                                 )}
-
 
                                 {/* Quick Suggestions */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mb-6">
@@ -835,21 +1249,127 @@ export default function AiChatTab() {
                                             : `${messageAIBg} rounded-bl-none ${theme === 'light' ? 'shadow-sm' : ''}`
                                     }`}>
                                         {msg.sender === "user" ? (
-                                            <div className="text-white">{msg.text}</div>
+                                            <div className="space-y-3">
+                                                {editingMessageId === msg.id ? (
+                                                    <div className="space-y-2">
+                                                        <textarea
+                                                            value={editText}
+                                                            onChange={(e) => setEditText(e.target.value)}
+                                                            className={`w-full p-2 rounded border ${
+                                                                theme === 'dark'
+                                                                    ? 'bg-gray-600 border-gray-500 text-white'
+                                                                    : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
+                                                            rows="3"
+                                                        />
+                                                        <div className="flex gap-2 justify-end">
+                                                            <button
+                                                                onClick={saveEdit}
+                                                                className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded text-sm"
+                                                            >
+                                                                <Save className="w-3 h-3" />
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelEdit}
+                                                                className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded text-sm"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="text-white">{msg.text}</div>
+                                                        <div className="flex gap-1 justify-end">
+                                                            <button
+                                                                onClick={() => startEditing(msg.id, msg.text)}
+                                                                className="p-1 hover:bg-blue-400/30 rounded transition-colors"
+                                                                title="Edit message"
+                                                            >
+                                                                <Edit className="w-3 h-3 text-white" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => copyToClipboard(msg.text, msg.id)}
+                                                                className="p-1 hover:bg-blue-400/30 rounded transition-colors"
+                                                                title="Copy message"
+                                                            >
+                                                                <Copy className="w-3 h-3 text-white" />
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
                                         ) : (
                                             <div className="space-y-3">
                                                 {renderText(msg.text)}
-                                    </div>
-                                        )}
 
-                                        {/* Movie Cards - Removed as per user request */}
+                                                {/* Action Buttons for AI Messages */}
+                                                <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-300/30">
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => regenerateResponse(msg.id)}
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
+                                                                theme === 'dark'
+                                                                    ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300'
+                                                                    : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
+                                                            }`}
+                                                            title="Regenerate response"
+                                                            disabled={loading}
+                                                        >
+                                                            <RefreshCw className="w-3 h-3" />
+                                                            Regenerate
+                                                        </button>
+                                                        <button
+                                                            onClick={() => toggleLike(msg.id)}
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
+                                                                messageLikes[msg.id]
+                                                                    ? 'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
+                                                                    : theme === 'dark'
+                                                                        ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300'
+                                                                        : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
+                                                            }`}
+                                                            title={messageLikes[msg.id] ? "Unlike response" : "Like response"}
+                                                        >
+                                                            <ThumbsUp className={`w-3 h-3 ${messageLikes[msg.id] ? 'fill-current' : ''}`} />
+                                                            {messageLikes[msg.id] ? 'Liked' : 'Like'}
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => copyToClipboard(msg.text, msg.id)}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                                                            theme === 'dark'
+                                                                ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300 hover:text-white'
+                                                                : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600 hover:text-gray-800'
+                                                        } ${copiedMessageId === msg.id ? 'bg-green-500/20 text-green-600' : ''}`}
+                                                        title="Copy response"
+                                                    >
+                                                        {copiedMessageId === msg.id ? (
+                                                            <>
+                                                                <Check className="w-3 h-3" />
+                                                                Copied!
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy className="w-3 h-3" />
+                                                                Copy
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={`text-xs ${textSecondary} mt-1 ${msg.sender === "user" ? "text-right" : "text-left"}`}>
                                         {formatTimestamp(msg.timestamp)}
+                                        {streamingMessageId === msg.id && (
+                                            <span className="ml-2 animate-pulse">• Typing...</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
 
                         {loading && (
                             <div className="flex gap-3">
@@ -873,16 +1393,30 @@ export default function AiChatTab() {
                             <div className="flex-1 relative">
                                 <textarea
                                     rows="1"
-                                    className={`w-full ${theme === 'dark' ? 'bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400' : 'bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500'} border rounded-xl px-4 py-3 pr-12 resize-none focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all`}
+                                    className={`w-full ${theme === 'dark' ? 'bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400' : 'bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500'} border rounded-xl px-4 py-3 pr-24 resize-none focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all`}
                                     placeholder="Ask about character analysis, show comparisons, or genre insights..."
                                     value={question}
                                     onChange={(e) => setQuestion(e.target.value)}
                                     onKeyDown={handleKey}
                                     style={{ minHeight: '48px', maxHeight: '120px' }}
                                 />
+                                {/* Voice Input Button */}
+                                <button
+                                    onClick={toggleVoiceInput}
+                                    className={`absolute right-12 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all ${
+                                        isListening
+                                            ? 'bg-red-500 text-white animate-pulse'
+                                            : theme === 'dark'
+                                                ? 'bg-gray-600/50 text-gray-300 hover:bg-gray-600'
+                                                : 'bg-gray-200/70 text-gray-600 hover:bg-gray-300'
+                                    }`}
+                                    title={isListening ? "Stop listening" : "Start voice input"}
+                                >
+                                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                                </button>
                             </div>
                             <button
-                                onClick={sendMessage}
+                                onClick={() => sendMessage()}
                                 disabled={loading || !question.trim()}
                                 className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
                             >
@@ -897,12 +1431,13 @@ export default function AiChatTab() {
                         <div className="flex justify-between items-center mt-2 px-1">
                             <span className={`text-xs ${textSecondary}`}>
                                 Press Enter to send, Shift+Enter for new line
+                                {isListening && <span className="ml-2 text-red-500">• Listening...</span>}
                             </span>
                             <span className={`text-xs ${
-                                connectionStatus === 'connected' 
+                                connectionStatus === 'connected'
                                     ? theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                                    : connectionStatus === 'error' 
-                                        ? theme === 'dark' ? 'text-red-400' : 'text-red-600' 
+                                    : connectionStatus === 'error'
+                                        ? theme === 'dark' ? 'text-red-400' : 'text-red-600'
                                         : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
                             }`}>
                                 {connectionStatus === 'connected' ? 'Backend Connected' :

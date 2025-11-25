@@ -1,6 +1,6 @@
 const config = {
-    // Backend API URL - will be set during build
-    backendUrl: process.env.REACT_APP_API_URL || 'https://your-backend.onrender.com',
+    backendUrl: process.env.REACT_APP_API_URL || "http://localhost:8080",
+
     tmdbApiKey: process.env.REACT_APP_TMDB_API_KEY,
     firebase: {
         apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -12,5 +12,12 @@ const config = {
         measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
     }
 };
+
+// Development warnings
+if (process.env.NODE_ENV === "development") {
+    Object.entries(config.firebase).forEach(([key, value]) => {
+        if (!value) console.warn(`⚠ Missing Firebase ENV var: ${key}`);
+    });
+}
 
 export default config;
