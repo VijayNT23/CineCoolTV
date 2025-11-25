@@ -5,16 +5,13 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 const LIBRARY_KEY = "user_library";
 
 /**
- * 🔹 Get current user's ID (if logged in)
+ *  Get current user's ID (if logged in)
  */
 const getUserId = () => {
     const user = JSON.parse(localStorage.getItem("userProfile"));
     return user?.uid || null;
 };
 
-/**
- * 🔹 Get library (from Firestore if logged in, else localStorage)
- */
 export const getLibrary = async () => {
     const uid = getUserId();
     const localData = JSON.parse(localStorage.getItem(LIBRARY_KEY)) || [];
@@ -107,6 +104,21 @@ export const toggleLibraryItem = async (item) => {
     }
 
     await saveLibrary(current);
+};
+
+/**
+ * 🔹 NEW: Remove item from library
+ */
+export const removeFromLibrary = async (id, type) => {
+    const current = JSON.parse(localStorage.getItem(LIBRARY_KEY)) || [];
+    const idx = current.findIndex((i) => i.id === id && i.type === type);
+
+    if (idx !== -1) {
+        current.splice(idx, 1);
+        await saveLibrary(current);
+        return true;
+    }
+    return false;
 };
 
 /**

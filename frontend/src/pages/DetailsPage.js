@@ -9,6 +9,7 @@ import {
     isInLibrary,
     getLibraryItem,
     updateLibraryItem,
+    removeFromLibrary,
 } from "../utils/libraryUtils";
 import { useTheme } from "../context/ThemeContext";
 
@@ -35,6 +36,7 @@ const DetailsPage = () => {
     const [isRewatching, setIsRewatching] = useState(false);
     const [fav, setFav] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -58,10 +60,23 @@ const DetailsPage = () => {
                 );
                 if (mounted) setVideos(videoRes.data.results || []);
 
-                const recRes = await axios.get(
-                    `https://api.themoviedb.org/3/${apiType}/${id}/recommendations?api_key=${API_KEY}`
-                );
-                if (mounted) setRecommendations(recRes.data.results || []);
+                // Fetch recommendations separately to handle loading state
+                setRecommendationsLoading(true);
+                try {
+                    const recRes = await axios.get(
+                        `https://api.themoviedb.org/3/${apiType}/${id}/recommendations?api_key=${API_KEY}`
+                    );
+                    if (mounted) {
+                        setRecommendations(recRes.data.results || []);
+                        console.log("📋 Recommendations loaded:", recRes.data.results?.length || 0);
+                    }
+                } catch (recError) {
+                    console.error("Error fetching recommendations:", recError);
+                    if (mounted) setRecommendations([]);
+                } finally {
+                    if (mounted) setRecommendationsLoading(false);
+                }
+
             } catch (err) {
                 console.error("Details fetch error", err);
             } finally {
@@ -137,6 +152,119 @@ const DetailsPage = () => {
         return `${mins}m`;
     };
 
+    // FIXED: Handle status change with toggle behavior
+    const handleStatusChange = async (newStatus) => {
+        const libraryItem = getLibraryItem(Number(id), type);
+
+        // If clicking the same status again, remove from library
+        if (status === newStatus) {
+            await removeFromLibrary(Number(id), type);
+            setStatus(null);
+            setIsRewatching(false);
+            return;
+        }
+
+        // If clicking Rewatching when already rewatching, toggle it off
+        if (newStatus === "Rewatching") {
+            if (isRewatching) {
+                setIsRewatching(false);
+                if (libraryItem) {
+                    await updateLibraryItem(Number(id), type, {
+                        isRewatching: false
+                    });
+                }
+                return;
+            } else {
+                // Start rewatching - set status to Completed and mark as rewatching
+                const genres = details.genres ? details.genres.map(g => g.name) : [];
+                let duration = details.runtime || 0;
+                if (apiType === "tv") {
+                    duration = calculateTotalDuration();
+                } else if (!duration || duration === 0) {
+                    if (type === "movie") duration = 120;
+                    else if (type === "anime") duration = 24;
+                }
+
+                updateLibraryStatus(Number(id), type, "Completed", {
+                    title: details.title || details.name,
+                    image: details.poster_path ? `${IMG_BASE}${details.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
+                    genres: genres,
+                    duration: duration,
+                    isRewatching: true
+                });
+                setStatus("Completed");
+                setIsRewatching(true);
+                return;
+            }
+        }
+
+        // Normal status change
+        const genres = details.genres ? details.genres.map(g => g.name) : [];
+        let duration = details.runtime || 0;
+        if (apiType === "tv") {
+            duration = calculateTotalDuration();
+        } else if (!duration || duration === 0) {
+            if (type === "movie") duration = 120;
+            else if (type === "anime") duration = 24;
+        }
+
+        updateLibraryStatus(Number(id), type, newStatus, {
+            title: details.title || details.name,
+            image: details.poster_path ? `${IMG_BASE}${details.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
+            genres: genres,
+            duration: duration,
+            isRewatching: newStatus === "Completed" ? isRewatching : false
+        });
+        setStatus(newStatus);
+        if (newStatus !== "Completed") {
+            setIsRewatching(false);
+        }
+    };
+
+    const handleToggleFav = () => {
+        const genres = details.genres ? details.genres.map(g => g.name) : [];
+        toggleFavorite(Number(id), type, {
+            title: details.title || details.name,
+            image: details.poster_path ? `${IMG_BASE}${details.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
+            genres: genres,
+            duration: type === "tv" ? calculateTotalDuration() : (details.runtime || 120)
+        });
+        setFav(!fav);
+    };
+
+    const handleAddToLibrary = async () => {
+        // If already in library, remove it
+        if (isInLibrary(Number(id), type)) {
+            await removeFromLibrary(Number(id), type);
+            setStatus(null);
+            setFav(false);
+            setIsRewatching(false);
+            return;
+        }
+
+        // Add to library with Watchlist status
+        const genres = details.genres ? details.genres.map(g => g.name) : [];
+        const itemData = {
+            id: Number(id),
+            type,
+            title: details.title || details.name,
+            image: details.poster_path ? `${IMG_BASE}${details.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
+            status: "Watchlist",
+            rating: details.vote_average ?? null,
+            genres: genres,
+            duration: type === "tv" ? calculateTotalDuration() : (details.runtime || 120)
+        };
+
+        await toggleLibraryItem(itemData);
+        setStatus("Watchlist");
+
+        const libraryItem = getLibraryItem(Number(id), type);
+        if (libraryItem) {
+            setStatus(libraryItem.status);
+            setFav(libraryItem.favorite || false);
+        }
+    };
+
     if (loading) {
         return (
             <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
@@ -166,87 +294,6 @@ const DetailsPage = () => {
     const trailer = videos.find(
         (v) => v.type === "Trailer" && v.site === "YouTube"
     );
-
-    const handleToggleFav = () => {
-        const genres = details.genres ? details.genres.map(g => g.name) : [];
-        toggleFavorite(Number(id), type, {
-            title: details.title || details.name,
-            image: poster,
-            genres: genres,
-            duration: type === "tv" ? calculateTotalDuration() : (details.runtime || 120)
-        });
-        setFav(!fav);
-    };
-
-    const handleAddToLibrary = async () => {
-        const genres = details.genres ? details.genres.map(g => g.name) : [];
-        const itemData = {
-            id: Number(id),
-            type,
-            title: details.title || details.name,
-            image: poster,
-            status: "Watchlist",
-            rating: details.vote_average ?? null,
-            genres: genres,
-            duration: type === "tv" ? calculateTotalDuration() : (details.runtime || 120)
-        };
-
-        await toggleLibraryItem(itemData);
-        setStatus("Watchlist");
-
-        const libraryItem = getLibraryItem(Number(id), type);
-        if (libraryItem) {
-            setStatus(libraryItem.status);
-            setFav(libraryItem.favorite || false);
-        }
-    };
-
-    const handleStatusChange = async (newStatus) => {
-        const genres = details.genres ? details.genres.map(g => g.name) : [];
-        let duration = details.runtime || 0;
-        if (apiType === "tv") {
-            duration = calculateTotalDuration();
-        } else if (!duration || duration === 0) {
-            if (type === "movie") {
-                duration = 120;
-            } else if (type === "anime") {
-                duration = 24;
-            }
-        }
-
-        const libraryItem = getLibraryItem(Number(id), type);
-
-        if (newStatus === "Rewatching") {
-            const newRewatchStatus = !isRewatching;
-            setIsRewatching(newRewatchStatus);
-            if (libraryItem) {
-                await updateLibraryItem(Number(id), type, {
-                    isRewatching: newRewatchStatus
-                });
-            } else {
-                updateLibraryStatus(Number(id), type, "Completed", {
-                    title: details.title || details.name,
-                    image: poster,
-                    genres: genres,
-                    duration: duration,
-                    isRewatching: newRewatchStatus
-                });
-                setStatus("Completed");
-            }
-        } else {
-            updateLibraryStatus(Number(id), type, newStatus, {
-                title: details.title || details.name,
-                image: poster,
-                genres: genres,
-                duration: duration,
-                isRewatching: newStatus === "Completed" ? isRewatching : false
-            });
-            setStatus(newStatus);
-            if (newStatus !== "Completed") {
-                setIsRewatching(false);
-            }
-        }
-    };
 
     const episodeRuntime = details.episode_run_time?.[0] || 45;
     const totalEpisodes = details.number_of_episodes || 0;
@@ -353,12 +400,12 @@ const DetailsPage = () => {
                                 onClick={handleAddToLibrary}
                                 className={`px-6 py-4 rounded-2xl font-black text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
                                     isInLibrary(Number(id), type)
-                                        ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white"
+                                        ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white"
                                         : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white"
                                 }`}
                             >
                                 {isInLibrary(Number(id), type)
-                                    ? "✅ IN LIBRARY"
+                                    ? "🗑️ REMOVE FROM LIBRARY"
                                     : "🎬 ADD TO LIBRARY"}
                             </button>
                             <button
@@ -482,13 +529,13 @@ const DetailsPage = () => {
                                         onClick={() => handleStatusChange(st)}
                                         className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
                                             status === st
-                                                ? "bg-gradient-to-r from-red-600 to-red-500 text-white animate-pulse"
+                                                ? "bg-gradient-to-r from-red-700 to-red-600 text-white shadow-lg"
                                                 : isDark
                                                     ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                                                     : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                                         }`}
                                     >
-                                        {st.toUpperCase()}
+                                        {status === st ? `✅ ${st.toUpperCase()}` : st.toUpperCase()}
                                     </button>
                                 ))}
 
@@ -497,13 +544,13 @@ const DetailsPage = () => {
                                     onClick={() => handleStatusChange("Rewatching")}
                                     className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
                                         isRewatching
-                                            ? "bg-gradient-to-r from-orange-600 to-yellow-500 text-white animate-pulse"
+                                            ? "bg-gradient-to-r from-orange-700 to-yellow-600 text-white shadow-lg"
                                             : isDark
                                                 ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                                                 : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                                     }`}
                                 >
-                                    {isRewatching ? "🔁 REWATCHING" : "🔁 MARK REWATCHING"}
+                                    {isRewatching ? "✅ REWATCHING" : "🔁 MARK REWATCHING"}
                                 </button>
                             </div>
 
@@ -666,7 +713,11 @@ const DetailsPage = () => {
 
                                 {activeTab === "recommendations" && (
                                     <div>
-                                        {recommendations.length > 0 ? (
+                                        {recommendationsLoading ? (
+                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                                isDark ? "text-gray-400" : "text-gray-600"
+                                            }`}>🔄 Loading recommendations...</p>
+                                        ) : recommendations.length > 0 ? (
                                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                                                 {recommendations.map((rec) => (
                                                     <div
@@ -704,7 +755,7 @@ const DetailsPage = () => {
                                         ) : (
                                             <p className={`text-center py-16 text-xl font-bold tracking-wide ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
-                                            }`}>🎭 No recommendations available</p>
+                                            }`}>🎭 No recommendations available for this title</p>
                                         )}
                                     </div>
                                 )}
