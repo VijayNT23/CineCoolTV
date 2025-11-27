@@ -54,7 +54,7 @@ const SearchTab = () => {
                     (item.media_type === 'movie' || item.media_type === 'tv') &&
                     (item.vote_count > 50 || item.popularity > 5) // Only popular items
                 )
-                .slice(0, 8); // Limit to 8 suggestions
+                .slice(0, 6); // Limit to 6 suggestions on mobile
 
             setSuggestions(popularSuggestions);
             setShowSuggestions(popularSuggestions.length > 0);
@@ -266,20 +266,20 @@ const SearchTab = () => {
     };
 
     return (
-        <div key={refreshKey} className={`min-h-screen themed-bg-primary themed-text-primary p-6`}>
+        <div key={refreshKey} className={`min-h-screen themed-bg-primary themed-text-primary px-4 sm:px-6 py-4 sm:py-6`}>
             {/* Search Header */}
             <div className="max-w-6xl mx-auto">
-                {/* Search bar with suggestions */}
-                <div className="relative mb-8">
-                    <form onSubmit={handleSearch} className="flex items-center">
+                {/* Search bar with suggestions - Mobile Optimized */}
+                <div className="relative mb-6 sm:mb-8">
+                    <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 sm:gap-0">
                         <div className="relative flex-1">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className={`h-5 w-5 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`} />
+                                <Search className={`h-4 w-4 sm:h-5 sm:w-5 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`} />
                             </div>
                             <input
                                 type="text"
-                                placeholder="Search movies, TV shows, or anime..."
-                                className={`block w-full pl-10 pr-12 py-4 text-lg rounded-l-xl border-0 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all ${
+                                placeholder="Search movies, TV shows..."
+                                className={`block w-full pl-10 pr-10 sm:pr-12 py-3 sm:py-4 text-base sm:text-lg rounded-xl sm:rounded-l-xl border-0 focus:ring-2 focus:ring-red-500 focus:outline-none transition-all ${
                                     theme === "dark"
                                         ? "bg-gray-800 text-white placeholder-gray-400"
                                         : "bg-white text-gray-900 placeholder-gray-500 border border-gray-300"
@@ -294,53 +294,54 @@ const SearchTab = () => {
                                     onClick={clearSearch}
                                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                                 >
-                                    <X className={`h-5 w-5 ${theme === "dark" ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`} />
+                                    <X className={`h-4 w-4 sm:h-5 sm:w-5 ${theme === "dark" ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`} />
                                 </button>
                             )}
                         </div>
                         <button
                             type="submit"
-                            className="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-r-xl text-white font-semibold text-lg transition-all duration-200 flex items-center gap-2"
+                            className="bg-red-600 hover:bg-red-700 px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-r-xl text-white font-semibold text-sm sm:text-lg transition-all duration-200 flex items-center justify-center gap-2"
                         >
-                            <Search size={20} />
-                            Search
+                            <Search size={16} className="sm:hidden" />
+                            <Search size={20} className="hidden sm:block" />
+                            <span className="hidden sm:inline">Search</span>
                         </button>
                     </form>
 
-                    {/* Suggestions Dropdown */}
+                    {/* Suggestions Dropdown - Mobile Optimized */}
                     {showSuggestions && (suggestions.length > 0 || loadingSuggestions) && (
-                        <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-2xl border backdrop-blur-lg z-50 max-h-80 overflow-y-auto ${
+                        <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-2xl border backdrop-blur-lg z-50 max-h-60 sm:max-h-80 overflow-y-auto ${
                             theme === "dark"
                                 ? "bg-gray-900 border-gray-700"
                                 : "bg-white border-gray-200"
                         }`}>
                             {loadingSuggestions ? (
-                                <div className="p-4 text-center">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600 mx-auto"></div>
+                                <div className="p-3 sm:p-4 text-center">
+                                    <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-red-600 mx-auto"></div>
                                 </div>
                             ) : (
                                 suggestions.map((suggestion) => (
                                     <button
                                         key={`${suggestion.id}-${suggestion.media_type}`}
                                         onClick={() => handleSuggestionClick(suggestion)}
-                                        className={`w-full text-left p-4 hover:bg-red-500 hover:text-white transition-all duration-200 border-b last:border-b-0 ${
+                                        className={`w-full text-left p-3 sm:p-4 hover:bg-red-500 hover:text-white transition-all duration-200 border-b last:border-b-0 ${
                                             theme === "dark"
                                                 ? "border-gray-700 hover:bg-red-600"
                                                 : "border-gray-200 hover:bg-red-500"
                                         }`}
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 sm:gap-3">
                                                 <img
-                                                    src={suggestion.poster_path ? `${BASE_IMG}${suggestion.poster_path}` : "https://via.placeholder.com/50x75?text=No+Image"}
+                                                    src={suggestion.poster_path ? `${BASE_IMG}${suggestion.poster_path}` : "https://via.placeholder.com/40x60?text=No+Image"}
                                                     alt={suggestion.title || suggestion.name}
-                                                    className="w-10 h-15 object-cover rounded"
+                                                    className="w-8 h-12 sm:w-10 sm:h-15 object-cover rounded"
                                                 />
-                                                <div>
-                                                    <p className="font-semibold text-lg">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm sm:text-lg truncate">
                                                         {suggestion.title || suggestion.name}
                                                     </p>
-                                                    <p className={`text-sm capitalize ${
+                                                    <p className={`text-xs sm:text-sm capitalize truncate ${
                                                         theme === "dark" ? "text-gray-400" : "text-gray-600"
                                                     }`}>
                                                         {suggestion.media_type} • {suggestion.release_date?.substring(0,4) || suggestion.first_air_date?.substring(0,4) || 'N/A'}
@@ -348,7 +349,7 @@ const SearchTab = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-semibold flex-shrink-0 ml-2 ${
                                                 suggestion.media_type === 'movie'
                                                     ? 'bg-blue-500 text-white'
                                                     : 'bg-purple-500 text-white'
@@ -363,36 +364,37 @@ const SearchTab = () => {
                     )}
                 </div>
 
-                {/* Results Header with Filter */}
+                {/* Results Header with Filter - Mobile Optimized */}
                 {results.length > 0 && (
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                        <div>
-                            <h2 className="text-2xl font-bold">
-                                Search Results for "{query}"
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-xl sm:text-2xl font-bold truncate">
+                                Results for "{query}"
                             </h2>
-                            <p className={`mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                            <p className={`mt-1 text-sm sm:text-base ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
                                 {results.length} {results.length === 1 ? 'result' : 'results'} found
-                                {filter !== 'all' && ` • Showing ${filter.replace('_', ' ')}`}
+                                {filter !== 'all' && ` • ${filter.replace('_', ' ')}`}
                             </p>
                         </div>
 
-                        {/* Filter Dropdown */}
-                        <div className="relative">
+                        {/* Filter Dropdown - Mobile Optimized */}
+                        <div className="relative w-full sm:w-auto">
                             <button
                                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                                className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 rounded-lg border transition-all w-full sm:w-auto text-sm sm:text-base ${
                                     theme === "dark"
                                         ? "bg-gray-800 border-gray-700 hover:bg-gray-700 text-white"
                                         : "bg-white border-gray-300 hover:bg-gray-50 text-gray-900"
                                 }`}
                             >
-                                <Filter size={16} />
-                                <span>{getFilterLabel()}</span>
-                                {showFilterDropdown ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                <Filter size={14} className="sm:hidden" />
+                                <Filter size={16} className="hidden sm:block" />
+                                <span className="truncate">{getFilterLabel()}</span>
+                                {showFilterDropdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
 
                             {showFilterDropdown && (
-                                <div className={`absolute top-full right-0 mt-2 w-48 rounded-lg shadow-xl border backdrop-blur-lg z-40 ${
+                                <div className={`absolute top-full left-0 right-0 sm:right-auto sm:left-auto sm:right-0 mt-1 sm:mt-2 rounded-lg shadow-xl border backdrop-blur-lg z-40 ${
                                     theme === "dark"
                                         ? "bg-gray-900 border-gray-700"
                                         : "bg-white border-gray-200"
@@ -401,7 +403,7 @@ const SearchTab = () => {
                                         <button
                                             key={option.value}
                                             onClick={() => handleFilterChange(option.value)}
-                                            className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-all ${
+                                            className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 transition-all text-sm sm:text-base ${
                                                 filter === option.value
                                                     ? theme === "dark"
                                                         ? "bg-red-600 text-white"
@@ -423,15 +425,15 @@ const SearchTab = () => {
 
                 {/* Loading State */}
                 {loading && (
-                    <div className="flex justify-center items-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                    <div className="flex justify-center items-center py-12 sm:py-20">
+                        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-red-600"></div>
                     </div>
                 )}
 
-                {/* Results Grid */}
+                {/* Results Grid - Mobile Optimized */}
                 {!loading && results.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mb-8">
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
                             {results.map((item) => {
                                 const mediaType = item.media_type || (item.title ? "movie" : "tv");
                                 const imageUrl = item.poster_path
@@ -446,14 +448,14 @@ const SearchTab = () => {
                                     <div
                                         key={`${item.id}-${mediaType}`}
                                         onClick={() => handleCardClick(item)}
-                                        className={`relative rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-pointer group ${
+                                        className={`relative rounded-lg sm:rounded-xl overflow-hidden shadow-lg hover:shadow-xl sm:hover:shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-pointer group ${
                                             theme === "dark" ? "bg-gray-800" : "bg-white"
                                         }`}
                                     >
                                         <img
                                             src={imageUrl}
                                             alt={item.title || item.name}
-                                            className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+                                            className="w-full h-48 sm:h-60 md:h-72 lg:h-80 object-cover transition-transform duration-300 group-hover:scale-110"
                                             loading="lazy"
                                         />
 
@@ -464,12 +466,12 @@ const SearchTab = () => {
                                                 : "bg-white/0 group-hover:bg-white/60"
                                         }`} />
 
-                                        {/* Action Buttons */}
-                                        <div className="absolute top-3 right-3 flex flex-col items-center gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        {/* Action Buttons - Mobile Optimized */}
+                                        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex flex-col items-center gap-1 sm:gap-2 pointer-events-auto opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                             {/* Favorite Button */}
                                             <button
                                                 onClick={(e) => handleFavorite(e, item)}
-                                                className={`rounded-full p-2 backdrop-blur-md shadow-lg hover:scale-110 transition-transform ${
+                                                className={`rounded-full p-1.5 sm:p-2 backdrop-blur-md shadow-lg hover:scale-110 transition-transform ${
                                                     favorite
                                                         ? "text-pink-500 bg-white/90"
                                                         : theme === "dark"
@@ -478,37 +480,37 @@ const SearchTab = () => {
                                                 }`}
                                                 title={favorite ? "Unfavorite" : "Add to favorites"}
                                             >
-                                                <span className="text-xl">{favorite ? "❤️" : "🤍"}</span>
+                                                <span className="text-lg sm:text-xl">{favorite ? "❤️" : "🤍"}</span>
                                             </button>
 
                                             {/* Library Button */}
                                             <button
                                                 onClick={(e) => handleAddLibrary(e, item)}
-                                                className={`px-3 py-1 rounded-lg text-xs font-semibold shadow-lg backdrop-blur-md transition-all ${
+                                                className={`px-2 py-1 rounded text-xs font-semibold shadow-lg backdrop-blur-md transition-all ${
                                                     inLibrary
                                                         ? "bg-green-600 text-white scale-105"
                                                         : "bg-red-600 text-white hover:bg-red-700"
                                                 }`}
                                             >
-                                                {inLibrary ? "✓ Added" : "+ Add"}
+                                                {inLibrary ? "✓" : "+"}
                                             </button>
                                         </div>
 
-                                        {/* Item Info */}
-                                        <div className={`absolute bottom-0 left-0 right-0 p-3 transition-all duration-300 ${
+                                        {/* Item Info - Mobile Optimized */}
+                                        <div className={`absolute bottom-0 left-0 right-0 p-2 sm:p-3 transition-all duration-300 ${
                                             theme === "dark"
                                                 ? "bg-gradient-to-t from-black/90 to-transparent text-white"
                                                 : "bg-gradient-to-t from-white/90 to-transparent text-gray-900"
                                         }`}>
-                                            <p className="font-semibold text-sm truncate mb-1">
+                                            <p className="font-semibold text-xs sm:text-sm truncate mb-1">
                                                 {item.title || item.name}
                                             </p>
                                             <div className="flex items-center justify-between text-xs">
-                                                <span className="capitalize">
-                                                    {mediaType} • {item.release_date?.substring(0,4) || item.first_air_date?.substring(0,4) || 'N/A'}
+                                                <span className="capitalize truncate flex-1">
+                                                    {mediaType === 'movie' ? '🎥' : '📺'} • {item.release_date?.substring(0,4) || item.first_air_date?.substring(0,4) || 'N/A'}
                                                 </span>
                                                 {item.vote_average > 0 && (
-                                                    <span className="flex items-center gap-1">
+                                                    <span className="flex items-center gap-1 flex-shrink-0 ml-1">
                                                         ⭐ {item.vote_average.toFixed(1)}
                                                     </span>
                                                 )}
@@ -519,12 +521,12 @@ const SearchTab = () => {
                             })}
                         </div>
 
-                        {/* Show More Button */}
+                        {/* Show More Button - Mobile Optimized */}
                         {showMore && (
-                            <div className="text-center mb-12">
+                            <div className="text-center mb-8 sm:mb-12">
                                 <button
                                     onClick={handleShowMore}
-                                    className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 border-2 ${
+                                    className={`px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-lg transition-all duration-300 border-2 ${
                                         theme === "dark"
                                             ? "bg-transparent border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
                                             : "bg-transparent border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
@@ -537,15 +539,15 @@ const SearchTab = () => {
                     </>
                 ) : (
                     !loading && query && (
-                        <div className="text-center py-20">
-                            <div className="text-6xl mb-4">🔍</div>
-                            <h3 className="text-2xl font-bold mb-4">No Results Found</h3>
-                            <p className={`text-lg mb-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                        <div className="text-center py-12 sm:py-20">
+                            <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
+                            <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">No Results Found</h3>
+                            <p className={`text-base sm:text-lg mb-4 sm:mb-6 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
                                 Try adjusting your search terms or filter settings
                             </p>
                             <button
                                 onClick={() => handleFilterChange("all")}
-                                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                className="px-4 sm:px-6 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
                             >
                                 Show All Results
                             </button>
@@ -553,12 +555,12 @@ const SearchTab = () => {
                     )
                 )}
 
-                {/* Empty State */}
+                {/* Empty State - Mobile Optimized */}
                 {!query && !loading && (
-                    <div className="text-center py-20">
-                        <div className="text-6xl mb-4">🎬</div>
-                        <h3 className="text-2xl font-bold mb-4">Start Your Search</h3>
-                        <p className={`text-lg ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                    <div className="text-center py-12 sm:py-20">
+                        <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🎬</div>
+                        <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Start Your Search</h3>
+                        <p className={`text-base sm:text-lg ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
                             Search for movies, TV shows, or anime to discover new content
                         </p>
                     </div>

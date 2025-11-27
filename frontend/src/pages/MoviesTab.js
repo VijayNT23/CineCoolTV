@@ -1,4 +1,4 @@
-// src/pages/MoviesTab.js (Updated with proper theme classes)
+// src/pages/MoviesTab.js
 import React, { useState, useEffect } from "react";
 import Banner from "../components/Banner";
 import Row from "../components/Row";
@@ -20,20 +20,20 @@ const MoviesTab = () => {
         return (
             <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
                 {/* Banner Shimmer */}
-                <div className="relative h-[80vh] bg-cover bg-center flex flex-col justify-end">
+                <div className="relative h-[60vh] sm:h-[80vh] bg-cover bg-center flex flex-col justify-end">
                     <div className="absolute inset-0 shimmer-cinematic-banner"></div>
                 </div>
 
                 {/* Rows Shimmer */}
-                <div className="space-y-8 py-8">
+                <div className="space-y-6 sm:space-y-8 py-6 sm:py-8">
                     {[1, 2, 3, 4].map((row) => (
-                        <div key={row} className="px-6">
-                            <div className={`h-8 rounded shimmer-inline w-64 mb-4 ${
+                        <div key={row} className="px-4 sm:px-6">
+                            <div className={`h-6 sm:h-8 rounded shimmer-inline w-48 sm:w-64 mb-3 sm:mb-4 ${
                                 isDark ? 'bg-gray-700/50' : 'bg-gray-300/50'
                             }`}></div>
-                            <div className="flex gap-4 overflow-x-auto">
+                            <div className="flex gap-3 sm:gap-4 overflow-x-auto">
                                 {[1, 2, 3, 4, 5, 6].map((card) => (
-                                    <div key={card} className={`min-w-[180px] h-[270px] rounded-xl ${
+                                    <div key={card} className={`min-w-[120px] sm:min-w-[150px] md:min-w-[180px] h-[170px] sm:h-[225px] md:h-[270px] rounded-lg sm:rounded-xl ${
                                         isDark ? 'bg-gray-800' : 'bg-gray-200'
                                     } shimmer-cinematic`}></div>
                                 ))}

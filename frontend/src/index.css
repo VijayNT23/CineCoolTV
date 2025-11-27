@@ -31,6 +31,27 @@
   --accent-color: #e50914;
 }
 
+/* Safe area support for modern phones */
+.safe-area-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
+.safe-area-padding {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Fallback for browsers that don't support safe-area */
+@supports not (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: 1rem;
+  }
+  .safe-area-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
 /* Base body styles */
 body {
   background-color: var(--bg-primary);
@@ -188,5 +209,99 @@ select:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* MOBILE UI */
+
+@media (max-width: 768px) {
+
+  /* ---- Banner ---- */
+  header {
+    height: 55vh !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  header h1 {
+    font-size: 1.6rem !important;
+    line-height: 1.9rem !important;
+  }
+
+  header p {
+    font-size: 0.85rem !important;
+    line-height: 1.2rem !important;
+    max-width: 92%;
+  }
+
+  /* Buttons inside banner */
+  header button {
+    padding: 0.45rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Rating badge */
+  header span {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* Slide Indicators */
+  header .absolute.bottom-6.right-10 {
+    bottom: 10px !important;
+    right: 20px !important;
+    gap: 6px !important;
+  }
+
+  header .absolute.bottom-6.right-10 button {
+    width: 8px !important;
+    height: 8px !important;
+    transform: scale(0.9) !important;
+  }
+
+  /* ---- Navbar ---- */
+
+  nav {
+    padding: 0 !important;
+  }
+
+  nav > div {
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
+  }
+
+  /* Logo text smaller */
+  nav h1 {
+    font-size: 1.4rem !important;
+  }
+
+  /* Tabs row becomes scrollable */
+  nav .flex.space-x-6 {
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 10px;
+    padding-bottom: 5px;
+    scrollbar-width: none;
+  }
+
+  nav .flex.space-x-6::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tabs shrink */
+  nav button {
+    padding: 0.35rem 0.75rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Icons shrink */
+  nav svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* Profile + Theme buttons */
+  nav .flex.items-center.gap-3 button {
+    padding: 0.35rem !important;
   }
 }

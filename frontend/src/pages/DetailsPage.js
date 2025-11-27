@@ -315,90 +315,85 @@ const DetailsPage = () => {
                 }`}></div>
             </div>
 
-            <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
-                {/* Back Button with Cinematic Style */}
+            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
+                {/* Back Button - Mobile Optimized */}
                 <button
                     onClick={() => window.history.back()}
-                    className={`mb-8 px-6 py-3 rounded-xl transition-all duration-300 font-bold tracking-wide shadow-2xl backdrop-blur-sm ${
+                    className={`mb-6 sm:mb-8 px-4 py-3 sm:px-6 sm:py-3 rounded-xl transition-all duration-300 font-bold tracking-wide shadow-2xl backdrop-blur-sm text-sm sm:text-base ${
                         isDark
                             ? "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                             : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                     }`}
                 >
-                    🎬 ← Back to Browse
+                    🎬 ← Back
                 </button>
 
-                <div className="flex flex-col md:flex-row gap-10 items-start">
-                    {/* Poster + Actions - Enhanced */}
-                    <div className="w-full md:w-96 flex-shrink-0">
+                <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 items-start">
+                    {/* Poster + Actions - Mobile First */}
+                    <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
                         <img
                             src={poster}
                             alt={details.title || details.name}
-                            className="rounded-3xl shadow-2xl w-full object-cover transform hover:scale-105 transition-transform duration-500 border-4 border-white/20"
+                            className="rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-xs mx-auto lg:max-w-none object-cover transform hover:scale-105 transition-transform duration-500 border-4 border-white/20"
                         />
 
-                        {/* Duration Information - Cinematic */}
-                        <div className={`mt-6 rounded-2xl p-6 shadow-2xl backdrop-blur-sm border ${
+                        {/* Duration Information - Mobile Compact */}
+                        <div className={`mt-4 sm:mt-6 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl backdrop-blur-sm border ${
                             isDark
                                 ? "bg-white/10 border-white/20"
                                 : "bg-black/10 border-gray-300/50"
                         }`}>
-                            <h3 className={`font-black text-xl mb-4 tracking-wider ${
+                            <h3 className={`font-black text-lg sm:text-xl mb-3 sm:mb-4 tracking-wider ${
                                 isDark
                                     ? "text-white drop-shadow-lg"
                                     : "text-gray-900"
                             }`}>🎥 DURATION INFO</h3>
                             {type === "movie" ? (
-                                <div className="space-y-3">
-                                    <p className={`font-bold text-lg ${
+                                <div className="space-y-2 sm:space-y-3">
+                                    <p className={`font-bold text-base sm:text-lg ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
+                                        <span className={`font-semibold text-sm sm:text-base ${
                                             isDark ? "text-gray-300" : "text-gray-600"
                                         }`}>Movie Duration:</span><br/>
                                         {formatDuration(details.runtime || 120)}
                                     </p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
-                                    <p className={`font-bold text-lg ${
+                                <div className="space-y-2 sm:space-y-3">
+                                    <p className={`font-bold text-base sm:text-lg ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
+                                        <span className={`font-semibold text-sm sm:text-base ${
                                             isDark ? "text-gray-300" : "text-gray-600"
                                         }`}>Episode Duration:</span><br/>
                                         {formatDuration(episodeRuntime)}
                                     </p>
-                                    <p className={`font-bold text-lg ${
+                                    <p className={`font-bold text-base sm:text-lg ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
+                                        <span className={`font-semibold text-sm sm:text-base ${
                                             isDark ? "text-gray-300" : "text-gray-600"
                                         }`}>Total Episodes:</span><br/>
                                         {totalEpisodes}
                                     </p>
-                                    <p className={`font-bold text-lg ${
+                                    <p className={`font-bold text-base sm:text-lg ${
                                         isDark ? "text-white" : "text-gray-800"
                                     }`}>
-                                        <span className={`font-semibold ${
+                                        <span className={`font-semibold text-sm sm:text-base ${
                                             isDark ? "text-gray-300" : "text-gray-600"
-                                        }`}>Total Series Duration:</span><br/>
+                                        }`}>Total Duration:</span><br/>
                                         {formatDuration(totalDuration)}
-                                    </p>
-                                    <p className={`text-sm font-semibold mt-2 ${
-                                        isDark ? "text-gray-400" : "text-gray-600"
-                                    }`}>
-                                        ({Math.floor(totalDuration / 60)} hours {totalDuration % 60} minutes)
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Action Buttons - Cinematic */}
-                        <div className="mt-6 flex flex-col gap-4">
+                        {/* Action Buttons - Stacked on Mobile */}
+                        <div className="mt-4 sm:mt-6 flex flex-col gap-3 sm:gap-4">
                             <button
                                 onClick={handleAddToLibrary}
-                                className={`px-6 py-4 rounded-2xl font-black text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
+                                className={`px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
                                     isInLibrary(Number(id), type)
                                         ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white"
                                         : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white"
@@ -410,12 +405,12 @@ const DetailsPage = () => {
                             </button>
                             <button
                                 onClick={handleToggleFav}
-                                className={`px-6 py-4 rounded-2xl font-black text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
+                                className={`px-4 py-3 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-black text-sm sm:text-lg tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 ${
                                     fav
                                         ? "bg-gradient-to-r from-pink-600 to-red-500 hover:from-pink-500 hover:to-red-400 text-white"
                                         : isDark
                                             ? "bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white"
-                                            : "bg-gradient-to-r from-gray-300 to-gray-200 hover:from-gray-200 hover:to-gray-100 text-gray-900"
+                                            : "bg-gradient-to-r from-gray-300 to-gray-200 hover:from-gray-200 hover:from-gray-100 text-gray-900"
                                 }`}
                             >
                                 {fav ? "❤️ FAVORITED" : "⭐ ADD TO FAVORITES"}
@@ -423,19 +418,19 @@ const DetailsPage = () => {
                         </div>
 
                         {status && (
-                            <div className={`mt-4 p-4 rounded-2xl shadow-xl backdrop-blur-sm border ${
+                            <div className={`mt-3 sm:mt-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xl backdrop-blur-sm border ${
                                 isDark
                                     ? "bg-white/10 border-white/20"
                                     : "bg-black/10 border-gray-300/50"
                             }`}>
-                                <p className={`text-lg font-bold tracking-wide ${
+                                <p className={`text-sm sm:text-lg font-bold tracking-wide ${
                                     isDark ? "text-white" : "text-gray-800"
                                 }`}>
-                                    📊 CURRENT STATUS: <span className={`font-black text-xl ${
+                                    📊 STATUS: <span className={`font-black text-base sm:text-xl ${
                                     isDark ? "text-white" : "text-gray-900"
                                 }`}>{status.toUpperCase()}</span>
                                     {isRewatching && (
-                                        <span className="ml-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-1 rounded-full text-sm font-black tracking-wide">
+                                        <span className="ml-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-2 py-1 rounded-full text-xs sm:text-sm font-black tracking-wide">
                                             🔁 REWATCHING
                                         </span>
                                     )}
@@ -444,10 +439,10 @@ const DetailsPage = () => {
                         )}
                     </div>
 
-                    {/* Main Details - Cinematic */}
-                    <div className="flex-1">
-                        {/* Title with Cinematic Impact */}
-                        <h1 className={`text-5xl font-black mb-4 tracking-tight leading-tight drop-shadow-2xl ${
+                    {/* Main Details - Mobile Optimized */}
+                    <div className="flex-1 w-full">
+                        {/* Title - Responsive Sizing */}
+                        <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black mb-4 tracking-tight leading-tight drop-shadow-2xl ${
                             isDark
                                 ? "text-white bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
                                 : "text-gray-900 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
@@ -455,39 +450,41 @@ const DetailsPage = () => {
                             {details.title || details.name}
                         </h1>
 
-                        {/* Metadata - Bold and Clean */}
-                        <div className={`mb-6 flex flex-wrap gap-6 text-lg font-bold tracking-wide ${
+                        {/* Metadata - Scrollable on Mobile */}
+                        <div className={`mb-6 flex overflow-x-auto gap-3 sm:gap-4 pb-2 scrollbar-hide ${
                             isDark ? "text-gray-200" : "text-gray-700"
                         }`}>
-                            {(details.release_date || details.first_air_date) && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    🗓️ {(details.release_date || details.first_air_date).slice(0, 10)}
-                                </span>
-                            )}
-                            {details.runtime && type === "movie" && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    ⏱️ {formatDuration(details.runtime)}
-                                </span>
-                            )}
-                            {details.vote_average !== undefined && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    ⭐ {details.vote_average.toFixed(1)}/10
-                                </span>
-                            )}
-                            {details.number_of_seasons && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    📺 {details.number_of_seasons} SEASONS
-                                </span>
-                            )}
-                            {details.number_of_episodes && (
-                                <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-                                    🎬 {details.number_of_episodes} EPISODES
-                                </span>
-                            )}
+                            <div className="flex gap-3 sm:gap-4 text-sm sm:text-lg font-bold tracking-wide flex-nowrap">
+                                {(details.release_date || details.first_air_date) && (
+                                    <span className="flex items-center gap-2 bg-white/10 px-3 py-2 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm whitespace-nowrap flex-shrink-0">
+                                        🗓️ {(details.release_date || details.first_air_date).slice(0, 10)}
+                                    </span>
+                                )}
+                                {details.runtime && type === "movie" && (
+                                    <span className="flex items-center gap-2 bg-white/10 px-3 py-2 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm whitespace-nowrap flex-shrink-0">
+                                        ⏱️ {formatDuration(details.runtime)}
+                                    </span>
+                                )}
+                                {details.vote_average !== undefined && (
+                                    <span className="flex items-center gap-2 bg-white/10 px-3 py-2 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm whitespace-nowrap flex-shrink-0">
+                                        ⭐ {details.vote_average.toFixed(1)}/10
+                                    </span>
+                                )}
+                                {details.number_of_seasons && (
+                                    <span className="flex items-center gap-2 bg-white/10 px-3 py-2 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm whitespace-nowrap flex-shrink-0">
+                                        📺 {details.number_of_seasons} SEASONS
+                                    </span>
+                                )}
+                                {details.number_of_episodes && (
+                                    <span className="flex items-center gap-2 bg-white/10 px-3 py-2 sm:px-4 sm:py-2 rounded-xl backdrop-blur-sm whitespace-nowrap flex-shrink-0">
+                                        🎬 {details.number_of_episodes} EPISODES
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Overview - Enhanced Readability */}
-                        <p className={`text-xl leading-relaxed mb-8 max-w-4xl font-semibold tracking-wide ${
+                        {/* Overview - Better Mobile Readability */}
+                        <p className={`text-base sm:text-lg md:text-xl leading-relaxed mb-6 sm:mb-8 font-semibold tracking-wide ${
                             isDark
                                 ? "text-gray-100 drop-shadow-lg"
                                 : "text-gray-800"
@@ -495,13 +492,13 @@ const DetailsPage = () => {
                             {details.overview || "No summary available."}
                         </p>
 
-                        {/* Genres Display - Cinematic */}
+                        {/* Genres Display - Mobile Responsive */}
                         {details.genres && details.genres.length > 0 && (
-                            <div className="flex flex-wrap gap-3 mb-8">
+                            <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
                                 {details.genres.map(genre => (
                                     <span
                                         key={genre.id}
-                                        className="px-5 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-lg font-black tracking-wide text-white shadow-2xl transform hover:scale-105 transition-transform"
+                                        className="px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black tracking-wide text-white shadow-2xl transform hover:scale-105 transition-transform flex-shrink-0"
                                     >
                                         {genre.name.toUpperCase()}
                                     </span>
@@ -509,14 +506,14 @@ const DetailsPage = () => {
                             </div>
                         )}
 
-                        {/* Status Buttons - Premium */}
-                        <div className="mb-10">
-                            <h3 className={`text-2xl font-black mb-6 tracking-wider ${
+                        {/* Status Buttons - Grid on Mobile */}
+                        <div className="mb-8 sm:mb-10">
+                            <h3 className={`text-xl sm:text-2xl font-black mb-4 sm:mb-6 tracking-wider ${
                                 isDark
                                     ? "text-white drop-shadow-lg"
                                     : "text-gray-900"
                             }`}>🎯 UPDATE STATUS</h3>
-                            <div className="flex flex-wrap gap-3">
+                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
                                 {[
                                     "Watchlist",
                                     "Watching",
@@ -527,7 +524,7 @@ const DetailsPage = () => {
                                     <button
                                         key={st}
                                         onClick={() => handleStatusChange(st)}
-                                        className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
+                                        className={`px-3 py-3 sm:px-4 sm:py-4 rounded-lg sm:rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 text-xs sm:text-sm ${
                                             status === st
                                                 ? "bg-gradient-to-r from-red-700 to-red-600 text-white shadow-lg"
                                                 : isDark
@@ -535,14 +532,14 @@ const DetailsPage = () => {
                                                     : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                                         }`}
                                     >
-                                        {status === st ? `✅ ${st.toUpperCase()}` : st.toUpperCase()}
+                                        {status === st ? `✅ ${st}` : st}
                                     </button>
                                 ))}
 
                                 {/* Rewatch Button */}
                                 <button
                                     onClick={() => handleStatusChange("Rewatching")}
-                                    className={`px-6 py-4 rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-110 ${
+                                    className={`px-3 py-3 sm:px-4 sm:py-4 rounded-lg sm:rounded-xl font-black tracking-wide transition-all duration-300 shadow-2xl transform hover:scale-105 text-xs sm:text-sm ${
                                         isRewatching
                                             ? "bg-gradient-to-r from-orange-700 to-yellow-600 text-white shadow-lg"
                                             : isDark
@@ -550,20 +547,20 @@ const DetailsPage = () => {
                                                 : "bg-black/10 hover:bg-black/20 text-gray-900 border border-gray-300/50"
                                     }`}
                                 >
-                                    {isRewatching ? "✅ REWATCHING" : "🔁 MARK REWATCHING"}
+                                    {isRewatching ? "✅ REWATCH" : "🔁 REWATCH"}
                                 </button>
                             </div>
 
                             {isRewatching && (
-                                <p className="text-lg font-bold text-orange-400 mt-4 tracking-wide drop-shadow-lg">
+                                <p className="text-sm sm:text-lg font-bold text-orange-400 mt-3 sm:mt-4 tracking-wide drop-shadow-lg">
                                     ✅ This show is marked as completed and you're currently rewatching it!
                                 </p>
                             )}
                         </div>
 
-                        {/* Tabs - Cinematic */}
-                        <div className="mt-10">
-                            <div className={`flex gap-8 border-b-2 pb-4 ${
+                        {/* Tabs - Scrollable on Mobile */}
+                        <div className="mt-8 sm:mt-10">
+                            <div className={`flex overflow-x-auto gap-4 sm:gap-6 border-b-2 pb-3 sm:pb-4 scrollbar-hide ${
                                 isDark ? "border-white/30" : "border-gray-400/50"
                             }`}>
                                 {["trailer", "cast", ...(type === "tv" ? ["episodes"] : []), "recommendations"].map(
@@ -571,9 +568,9 @@ const DetailsPage = () => {
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab)}
-                                            className={`pb-2 capitalize text-lg font-black tracking-wide transition-all duration-300 ${
+                                            className={`pb-1 sm:pb-2 capitalize text-sm sm:text-lg font-black tracking-wide transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
                                                 activeTab === tab
-                                                    ? "border-b-4 border-red-500 text-red-500 transform scale-110"
+                                                    ? "border-b-4 border-red-500 text-red-500 transform scale-105"
                                                     : isDark
                                                         ? "text-gray-400 hover:text-white hover:scale-105"
                                                         : "text-gray-600 hover:text-gray-900 hover:scale-105"
@@ -585,18 +582,20 @@ const DetailsPage = () => {
                                 )}
                             </div>
 
-                            <div className="mt-8">
+                            <div className="mt-6 sm:mt-8">
                                 {activeTab === "trailer" && (
-                                    <div className="rounded-3xl overflow-hidden shadow-2xl">
+                                    <div className="rounded-xl sm:rounded-3xl overflow-hidden shadow-2xl">
                                         {trailer ? (
-                                            <iframe
-                                                className="w-full h-96 rounded-3xl"
-                                                src={`https://www.youtube.com/embed/${trailer.key}?autoplay=0&rel=0&modestbranding=1`}
-                                                title="Trailer"
-                                                allowFullScreen
-                                            />
+                                            <div className="relative pt-[56.25%]"> {/* 16:9 Aspect Ratio */}
+                                                <iframe
+                                                    className="absolute top-0 left-0 w-full h-full rounded-xl sm:rounded-3xl"
+                                                    src={`https://www.youtube.com/embed/${trailer.key}?autoplay=0&rel=0&modestbranding=1`}
+                                                    title="Trailer"
+                                                    allowFullScreen
+                                                />
+                                            </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-12 sm:py-16 text-lg sm:text-xl font-bold tracking-wide ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🎥 No trailer available</p>
                                         )}
@@ -604,7 +603,7 @@ const DetailsPage = () => {
                                 )}
 
                                 {activeTab === "cast" && (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
                                         {cast.slice(0, 12).map((c) => (
                                             <div
                                                 key={c.cast_id || c.credit_id || c.id}
@@ -617,15 +616,15 @@ const DetailsPage = () => {
                                                             : "https://via.placeholder.com/200x300?text=No+Image"
                                                     }
                                                     alt={c.name}
-                                                    className="w-36 h-48 object-cover rounded-2xl mx-auto mb-3 group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
+                                                    className="w-20 h-28 sm:w-28 sm:h-36 md:w-32 md:h-44 lg:w-36 lg:h-48 object-cover rounded-xl sm:rounded-2xl mx-auto mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
                                                     onError={(e) => {
                                                         e.target.src = "https://via.placeholder.com/200x300?text=No+Image";
                                                     }}
                                                 />
-                                                <p className={`font-black text-sm tracking-wide ${
+                                                <p className={`font-black text-xs sm:text-sm tracking-wide ${
                                                     isDark ? "text-white" : "text-gray-900"
                                                 }`}>{c.name}</p>
-                                                <p className={`text-xs font-bold mt-1 ${
+                                                <p className={`text-xs mt-1 ${
                                                     isDark ? "text-gray-400" : "text-gray-600"
                                                 }`}>{c.character}</p>
                                             </div>
@@ -635,8 +634,8 @@ const DetailsPage = () => {
 
                                 {activeTab === "episodes" && type === "tv" && (
                                     <div>
-                                        <div className="mb-6 flex items-center gap-4">
-                                            <label className={`font-black text-xl tracking-wide ${
+                                        <div className="mb-4 sm:mb-6 flex items-center gap-3 sm:gap-4">
+                                            <label className={`font-black text-lg sm:text-xl tracking-wide ${
                                                 isDark ? "text-white" : "text-gray-900"
                                             }`}>📺 SEASON:</label>
                                             <select
@@ -644,7 +643,7 @@ const DetailsPage = () => {
                                                 onChange={(e) =>
                                                     setSelectedSeason(Number(e.target.value))
                                                 }
-                                                className={`px-4 py-3 rounded-xl font-bold border-2 ${
+                                                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl font-bold border-2 text-sm sm:text-base ${
                                                     isDark
                                                         ? "bg-white/10 text-white border-white/20"
                                                         : "bg-white text-gray-900 border-gray-300"
@@ -662,37 +661,37 @@ const DetailsPage = () => {
                                         </div>
 
                                         {episodes.length > 0 ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-96 overflow-y-auto">
+                                            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6 max-h-80 sm:max-h-96 overflow-y-auto">
                                                 {episodes.map((ep) => (
                                                     <div
                                                         key={ep.id}
-                                                        className={`p-6 rounded-2xl shadow-2xl backdrop-blur-sm border transform hover:scale-105 transition-all duration-300 ${
+                                                        className={`p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-sm border transform hover:scale-105 transition-all duration-300 ${
                                                             isDark
                                                                 ? "bg-white/10 hover:bg-white/15 border-white/20"
                                                                 : "bg-black/10 hover:bg-black/15 border-gray-300/50"
                                                         }`}
                                                     >
-                                                        <div className="flex items-center gap-6">
+                                                        <div className="flex items-start gap-3 sm:gap-4 md:gap-6">
                                                             {ep.still_path && (
                                                                 <img
                                                                     src={`${IMG_BASE}${ep.still_path}`}
                                                                     alt={ep.name}
-                                                                    className="w-32 h-20 object-cover rounded-xl shadow-lg"
+                                                                    className="w-20 h-14 sm:w-28 sm:h-20 md:w-32 md:h-20 object-cover rounded-lg sm:rounded-xl shadow-lg flex-shrink-0"
                                                                 />
                                                             )}
-                                                            <div className="flex-1">
-                                                                <h3 className={`font-black text-lg tracking-wide ${
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className={`font-black text-sm sm:text-lg tracking-wide ${
                                                                     isDark ? "text-white" : "text-gray-900"
                                                                 }`}>
                                                                     S{selectedSeason}E{ep.episode_number}: {ep.name}
                                                                 </h3>
-                                                                <p className={`text-sm font-semibold mt-2 line-clamp-2 ${
+                                                                <p className={`text-xs sm:text-sm font-semibold mt-1 sm:mt-2 line-clamp-2 ${
                                                                     isDark ? "text-gray-300" : "text-gray-600"
                                                                 }`}>
                                                                     {ep.overview || "No description available."}
                                                                 </p>
                                                                 {ep.runtime && (
-                                                                    <p className={`text-xs font-bold mt-2 ${
+                                                                    <p className={`text-xs mt-1 sm:mt-2 ${
                                                                         isDark ? "text-gray-500" : "text-gray-600"
                                                                     }`}>
                                                                         ⏱️ {formatDuration(ep.runtime)}
@@ -704,7 +703,7 @@ const DetailsPage = () => {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-12 sm:py-16 text-lg sm:text-xl font-bold tracking-wide ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🎬 No episodes found</p>
                                         )}
@@ -714,11 +713,11 @@ const DetailsPage = () => {
                                 {activeTab === "recommendations" && (
                                     <div>
                                         {recommendationsLoading ? (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-12 sm:py-16 text-lg sm:text-xl font-bold tracking-wide ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
                                             }`}>🔄 Loading recommendations...</p>
                                         ) : recommendations.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
                                                 {recommendations.map((rec) => (
                                                     <div
                                                         key={rec.id}
@@ -739,12 +738,12 @@ const DetailsPage = () => {
                                                                     : "https://via.placeholder.com/300x450?text=No+Image"
                                                             }
                                                             alt={rec.title || rec.name}
-                                                            className="rounded-2xl w-full group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
+                                                            className="rounded-xl sm:rounded-2xl w-full group-hover:scale-110 transition-transform duration-300 shadow-2xl border-2 border-white/20"
                                                             onError={(e) => {
                                                                 e.target.src = "https://via.placeholder.com/300x450?text=No+Image";
                                                             }}
                                                         />
-                                                        <p className={`text-sm font-black mt-3 tracking-wide group-hover:text-red-400 transition-colors ${
+                                                        <p className={`text-xs sm:text-sm font-black mt-2 sm:mt-3 tracking-wide group-hover:text-red-400 transition-colors line-clamp-2 ${
                                                             isDark ? "text-white" : "text-gray-900"
                                                         }`}>
                                                             {rec.title || rec.name}
@@ -753,9 +752,9 @@ const DetailsPage = () => {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className={`text-center py-16 text-xl font-bold tracking-wide ${
+                                            <p className={`text-center py-12 sm:py-16 text-lg sm:text-xl font-bold tracking-wide ${
                                                 isDark ? "text-gray-400" : "text-gray-600"
-                                            }`}>🎭 No recommendations available for this title</p>
+                                            }`}>🎭 No recommendations available</p>
                                         )}
                                     </div>
                                 )}
