@@ -10,7 +10,8 @@ import {
 
 const LibraryPage = () => {
     const { currentUser } = useAuth();
-    const { isDark } = useTheme();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [libraryItems, setLibraryItems] = useState([]);
     const [filter, setFilter] = useState("All");
     const [typeFilter, setTypeFilter] = useState("All");
@@ -161,21 +162,34 @@ const LibraryPage = () => {
     };
 
     return (
+<<<<<<< HEAD
         <div className={`pt-20 sm:pt-24 px-4 sm:px-6 pb-8 sm:pb-16 min-h-screen transition-all duration-500 ${
+=======
+        <div className={`pt-20 px-4 pb-8 min-h-screen ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
             isDark
                 ? "bg-gradient-to-b from-[#0b0b0b] to-black"
                 : "bg-gradient-to-b from-gray-50 to-gray-100"
         }`}>
             <div className="max-w-7xl mx-auto">
+<<<<<<< HEAD
                 {/* Header */}
                 <h2 className={`text-2xl sm:text-4xl font-bold mb-4 sm:mb-6 text-center ${
+=======
+                <h2 className={`text-2xl sm:text-3xl font-bold mb-6 text-center ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                     isDark ? "text-blue-400" : "text-blue-600"
                 }`}>
                     🎬 My Library
                 </h2>
 
+<<<<<<< HEAD
                 {/* Type Filter Tabs - Mobile Horizontal Scroll */}
                 <div className="flex overflow-x-auto gap-2 sm:gap-4 mb-6 sm:mb-8 pb-2 scrollbar-hide">
+=======
+                {/* Type Filter - Horizontal scroll on mobile */}
+                <div className="flex overflow-x-auto pb-4 mb-6 scrollbar-hide gap-3">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                     {typeFilters.map((type) => {
                         const isActive = typeFilter === type.value;
                         const stats = typeStats[type.value.toLowerCase()];
@@ -183,17 +197,27 @@ const LibraryPage = () => {
                             <button
                                 key={type.value}
                                 onClick={() => handleTypeFilterClick(type.value)}
+<<<<<<< HEAD
                                 className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-sm sm:text-lg font-semibold transition-all duration-300 shadow-lg flex-shrink-0 ${
+=======
+                                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     isActive
-                                        ? "bg-blue-600 text-white scale-105"
+                                        ? "bg-blue-600 text-white"
                                         : isDark
                                             ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
                                             : "bg-white text-gray-700 hover:bg-gray-200"
                                 }`}
                             >
+<<<<<<< HEAD
                                 <span className="text-lg sm:text-2xl">{type.icon}</span>
                                 <span className="hidden xs:inline">{type.label}</span>
                                 <span className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm ${
+=======
+                                <span className="text-lg">{type.icon}</span>
+                                <span>{type.label}</span>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     isActive
                                         ? "bg-blue-500"
                                         : isDark
@@ -207,17 +231,26 @@ const LibraryPage = () => {
                     })}
                 </div>
 
+<<<<<<< HEAD
                 {/* Status Filter Tabs - Mobile Grid */}
                 <div className="grid grid-cols-4 sm:flex sm:flex-wrap justify-center gap-1 sm:gap-3 mb-6 sm:mb-10">
+=======
+                {/* Status Filter - Horizontal scroll on mobile */}
+                <div className="flex overflow-x-auto pb-4 mb-6 scrollbar-hide gap-2">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                     {statusFilters.map((cat) => {
                         const isActive = filter === cat;
                         return (
                             <button
                                 key={cat}
                                 onClick={() => handleFilterClick(cat)}
+<<<<<<< HEAD
                                 className={`px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 shadow-md text-center ${
+=======
+                                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     isActive
-                                        ? "bg-blue-600 text-white scale-105"
+                                        ? "bg-blue-600 text-white"
                                         : isDark
                                             ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
                                             : "bg-white text-gray-700 hover:bg-gray-200"
@@ -231,6 +264,7 @@ const LibraryPage = () => {
                     })}
                 </div>
 
+<<<<<<< HEAD
                 {/* Stats Summary - Mobile Compact */}
                 <div className={`rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg ${
                     isDark ? "bg-gray-800" : "bg-white"
@@ -276,12 +310,60 @@ const LibraryPage = () => {
                                 isDark ? "text-pink-400" : "text-pink-600"
                             }`}>{typeStats.anime}</div>
                             <div className={`text-xs sm:text-sm ${
+=======
+                {/* Stats Overview - 2 columns on mobile */}
+                <div className={`rounded-xl p-4 mb-6 shadow-lg ${
+                    isDark ? "bg-gray-800" : "bg-white"
+                }`}>
+                    <h3 className={`text-lg font-semibold mb-3 text-center ${
+                        isDark ? "text-white" : "text-gray-900"
+                    }`}>📊 Overview</h3>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                        <div className={`p-3 rounded-lg ${
+                            isDark ? "bg-blue-900/20" : "bg-blue-50"
+                        }`}>
+                            <div className={`text-xl font-bold ${
+                                isDark ? "text-blue-400" : "text-blue-600"
+                            }`}>{typeStats.all}</div>
+                            <div className={`text-xs ${
+                                isDark ? "text-gray-400" : "text-gray-600"
+                            }`}>Total</div>
+                        </div>
+                        <div className={`p-3 rounded-lg ${
+                            isDark ? "bg-green-900/20" : "bg-green-50"
+                        }`}>
+                            <div className={`text-xl font-bold ${
+                                isDark ? "text-green-400" : "text-green-600"
+                            }`}>{typeStats.movies}</div>
+                            <div className={`text-xs ${
+                                isDark ? "text-gray-400" : "text-gray-600"
+                            }`}>Movies</div>
+                        </div>
+                        <div className={`p-3 rounded-lg ${
+                            isDark ? "bg-purple-900/20" : "bg-purple-50"
+                        }`}>
+                            <div className={`text-xl font-bold ${
+                                isDark ? "text-purple-400" : "text-purple-600"
+                            }`}>{typeStats.series}</div>
+                            <div className={`text-xs ${
+                                isDark ? "text-gray-400" : "text-gray-600"
+                            }`}>Series</div>
+                        </div>
+                        <div className={`p-3 rounded-lg ${
+                            isDark ? "bg-pink-900/20" : "bg-pink-50"
+                        }`}>
+                            <div className={`text-xl font-bold ${
+                                isDark ? "text-pink-400" : "text-pink-600"
+                            }`}>{typeStats.anime}</div>
+                            <div className={`text-xs ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                 isDark ? "text-gray-400" : "text-gray-600"
                             }`}>Anime</div>
                         </div>
                     </div>
                 </div>
 
+<<<<<<< HEAD
                 {/* Cards Grid - Mobile Responsive */}
                 {filteredItems.length === 0 ? (
                     <div className="text-center py-12 sm:py-16">
@@ -301,46 +383,83 @@ const LibraryPage = () => {
                     </div>
                 ) : (
                     <div className="grid gap-4 sm:gap-6 md:gap-8 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 transition-all">
+=======
+                {/* Cards Grid - 1 column on mobile */}
+                {filteredItems.length === 0 ? (
+                    <div className="text-center py-12">
+                        <div className="text-4xl mb-3">📚</div>
+                        <p className={`text-base mb-3 ${
+                            isDark ? "text-gray-400" : "text-gray-500"
+                        }`}>
+                            {typeFilter === 'All'
+                                ? "Your library is empty."
+                                : `No ${typeFilter.toLowerCase()} found.`}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                         {filteredItems.map((item) => (
                             <div
                                 key={`${item.type}-${item.id}`}
                                 onClick={() => navigate(`/details/${item.type}/${item.id}`)}
+<<<<<<< HEAD
                                 className={`relative group rounded-xl sm:rounded-2xl overflow-hidden shadow-lg hover:shadow-xl sm:hover:shadow-2xl transform hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 cursor-pointer ${
+=======
+                                className={`relative rounded-xl overflow-hidden shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all cursor-pointer ${
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     isDark ? "bg-gray-800" : "bg-white"
                                 }`}
                             >
                                 <img
-                                    src={
-                                        item.image ||
-                                        "https://via.placeholder.com/300x450?text=No+Image"
-                                    }
+                                    src={item.image || "https://via.placeholder.com/300x450?text=No+Image"}
                                     alt={item.title || "Untitled"}
                                     onError={(e) =>
                                         (e.target.src =
                                             "https://via.placeholder.com/300x450?text=No+Image")
                                     }
+<<<<<<< HEAD
                                     className="w-full h-40 sm:h-48 md:h-56 lg:h-64 object-cover group-hover:opacity-80 transition-opacity duration-300"
                                 />
 
                                 {/* Type Badge */}
                                 <div className="absolute top-2 left-2 bg-black/70 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold">
+=======
+                                    className="w-full h-48 object-cover group-hover:opacity-80 transition-opacity duration-300"
+                                />
+
+                                {/* Type Badge */}
+                                <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-lg text-xs font-semibold">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     {getTypeIcon(item)}
                                 </div>
 
                                 {/* Favorite toggle */}
                                 <button
                                     onClick={(e) => handleFavoriteToggle(e, item)}
+<<<<<<< HEAD
                                     className="absolute top-2 right-2 text-xl sm:text-2xl z-20 hover:scale-110 transition-transform"
+=======
+                                    className="absolute top-2 right-2 text-xl z-20 hover:scale-110 transition-transform"
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                 >
                                     {item.favorite ? "❤️" : "🤍"}
                                 </button>
 
                                 {/* Info overlay */}
+<<<<<<< HEAD
                                 <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 md:p-4 text-white z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
                                     <h3 className="text-sm sm:text-base md:text-lg font-bold line-clamp-1 sm:line-clamp-2">
                                         {item.title || "Untitled"}
                                     </h3>
                                     <div className="flex justify-between items-center text-xs sm:text-sm mt-1">
+=======
+                                <div className="absolute bottom-0 left-0 right-0 p-3 text-white z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                    <h3 className="text-sm font-bold line-clamp-1">
+                                        {item.title || "Untitled"}
+                                    </h3>
+                                    <div className="flex justify-between items-center text-xs mt-1">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                         <span
                                             className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg ${getStatusColor(item.status, item.favorite)}`}
                                         >
@@ -359,16 +478,28 @@ const LibraryPage = () => {
                     </div>
                 )}
 
+<<<<<<< HEAD
                 {/* Link to Profile Stats - Mobile Optimized */}
                 <div className="mt-8 sm:mt-12 text-center">
                     <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-white">
                         <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 sm:mb-4">📊 View Detailed Statistics</h3>
                         <p className="text-sm sm:text-base md:text-lg mb-4 sm:mb-6 text-blue-100">
+=======
+                {/* Link to Profile Stats */}
+                <div className="mt-8 text-center">
+                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
+                        <h3 className="text-xl font-bold mb-3">📊 View Detailed Statistics</h3>
+                        <p className="text-sm mb-4 text-blue-100">
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                             Check your watch time, top genres, and track your progress in your profile!
                         </p>
                         <button
                             onClick={() => navigate('/profile')}
+<<<<<<< HEAD
                             className="bg-white text-blue-600 px-4 sm:px-6 md:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-100 transition-colors text-sm sm:text-base"
+=======
+                            className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-sm"
+>>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                         >
                             View Profile Stats
                         </button>

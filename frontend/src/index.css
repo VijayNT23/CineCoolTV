@@ -13,6 +13,21 @@
   --accent-color: #e50914;
 }
 
+button,
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
 :root[data-theme="dark"] {
   --bg-primary: #0f0f0f;
   --bg-secondary: #1a1a1a;
