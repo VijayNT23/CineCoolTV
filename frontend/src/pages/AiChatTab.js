@@ -1,19 +1,15 @@
 // src/pages/AiChatTab.js
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
     Send, Bot, User, Sparkles, Loader2, Film, Zap,
     TrendingUp, Heart, Search, MessageCircle, RefreshCw, History,
-    Trash2, Plus, Copy, Check, Edit, Download, Mic, MicOff,
-<<<<<<< HEAD
-    ThumbsUp, Search as SearchIcon, X, Save, Clock, Star, Menu,
-    Moon, Sun, LogOut, Settings, User as UserIcon
-=======
-    ThumbsUp, Search as SearchIcon, X, Save, Clock, Star,
-    Menu, X as CloseIcon
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
+    Trash2, Plus, Copy, Check, Download, Mic, MicOff,
+    ThumbsUp, Search as SearchIcon, X, Clock, Star, Menu,
+    Moon, Sun, Bookmark, Tv, UserCircle
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -27,29 +23,27 @@ export default function AiChatTab() {
     const [connectionStatus, setConnectionStatus] = useState("checking");
     const [showHistory, setShowHistory] = useState(false);
     const [showLiked, setShowLiked] = useState(false);
-    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
     const [chatHistory, setChatHistory] = useState([]);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
-    const [editingMessageId, setEditingMessageId] = useState(null);
-    const [editText, setEditText] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [isListening, setIsListening] = useState(false);
     const [isStreaming, setIsStreaming] = useState(false);
     const [streamingMessageId, setStreamingMessageId] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
     const [messageLikes, setMessageLikes] = useState({});
-    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeMobileView, setActiveMobileView] = useState("chat");
-    const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-    const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("ai-chat");
 
     const chatEndRef = useRef(null);
     const recognitionRef = useRef(null);
     const textareaRef = useRef(null);
     const profileMenuRef = useRef(null);
     const headerMenuRef = useRef(null);
+    const mobileMenuRef = useRef(null);
     const { theme, toggleTheme } = useTheme();
-    const { currentUser, logout } = useAuth();
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
 
     const suggestions = [
         "Should I watch Breaking Bad?",
@@ -62,7 +56,6 @@ export default function AiChatTab() {
         "Compare Marvel and DC movies"
     ];
 
-<<<<<<< HEAD
     const proTips = [
         {
             icon: <Search className="w-4 h-4" />,
@@ -119,14 +112,20 @@ export default function AiChatTab() {
         ? 'bg-gray-700/60 text-gray-400'
         : 'bg-white/80 text-gray-600';
 
+    // Navigation tabs - Fixed: Only one AI Chat entry
+    const navigationTabs = [
+        { id: "ai-chat", label: "AI Chat", icon: Bot, path: "/ai-chat" },
+        { id: "movies", label: "Movies", icon: Film, path: "/movies" },
+        { id: "series", label: "Series", icon: Tv, path: "/series" },
+        { id: "library", label: "My Library", icon: Bookmark, path: "/library" },
+        { id: "profile", label: "Profile", icon: UserCircle, path: "/profile" }
+    ];
+
     // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
-                setProfileMenuOpen(false);
-            }
-            if (headerMenuRef.current && !headerMenuRef.current.contains(event.target)) {
-                setHeaderMenuOpen(false);
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+                setMobileMenuOpen(false);
             }
         };
 
@@ -136,8 +135,6 @@ export default function AiChatTab() {
         };
     }, []);
 
-=======
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
     // Initialize speech recognition
     useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -173,7 +170,6 @@ export default function AiChatTab() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [chat]);
 
-<<<<<<< HEAD
     // Auto-resize textarea
     useEffect(() => {
         if (textareaRef.current) {
@@ -183,6 +179,55 @@ export default function AiChatTab() {
     }, [question]);
 
     // Load chat history and liked messages when user logs in or component mounts
+    const loadChatHistory = useCallback(async () => {
+        if (!currentUser) {
+            console.log("❌ No user, cannot load history");
+            return;
+        }
+
+        try {
+            console.log("📂 Starting to load chat history...");
+            const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
+            const historySnap = await getDoc(historyRef);
+
+            if (historySnap.exists()) {
+                const data = historySnap.data();
+                const sessions = data.sessions || [];
+                console.log("📂 Successfully loaded chat history:", sessions.length, "sessions");
+                setChatHistory(sessions);
+            } else {
+                console.log("📂 No chat history found in Firebase");
+                setChatHistory([]);
+            }
+        } catch (error) {
+            console.error("❌ Error loading chat history:", error);
+        }
+    }, [currentUser]);
+
+    const loadLikedMessages = useCallback(async () => {
+        if (!currentUser) {
+            console.log("❌ No user, cannot load liked messages");
+            return;
+        }
+
+        try {
+            console.log("❤️ Starting to load liked messages...");
+            const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
+            const likesSnap = await getDoc(likesRef);
+
+            if (likesSnap.exists()) {
+                const data = likesSnap.data();
+                console.log("❤️ Successfully loaded liked messages:", Object.keys(data).length);
+                setMessageLikes(data);
+            } else {
+                console.log("❤️ No liked messages found in Firebase");
+                setMessageLikes({});
+            }
+        } catch (error) {
+            console.error("❌ Error loading liked messages:", error);
+        }
+    }, [currentUser]);
+
     useEffect(() => {
         if (currentUser) {
             console.log("👤 User logged in, loading data...");
@@ -193,107 +238,53 @@ export default function AiChatTab() {
             setChatHistory([]);
             setMessageLikes({});
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser]);
-
-    // Save chat to history after each message (only for logged-in users)
-    useEffect(() => {
-        if (currentUser && chat.length > 0) {
-            const timeoutId = setTimeout(() => {
-                saveChatToHistory();
-            }, 1000);
-            return () => clearTimeout(timeoutId);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat, currentUser]);
-
-    const loadChatHistory = async () => {
-        if (!currentUser) {
-            console.log("❌ No user, cannot load history");
-            return;
-        }
-=======
-    // Load chat history and liked messages
-    const loadChatHistory = useRef(async () => {
-        if (!currentUser) return;
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-
-        try {
-            const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
-            const historySnap = await getDoc(historyRef);
-
-            if (historySnap.exists()) {
-                const data = historySnap.data();
-                const sessions = data.sessions || [];
-                setChatHistory(sessions);
-            } else {
-                setChatHistory([]);
-            }
-        } catch (error) {
-            console.error("Error loading chat history:", error);
-        }
-    });
-
-    const loadLikedMessages = useRef(async () => {
-        if (!currentUser) return;
-
-        try {
-            const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
-            const likesSnap = await getDoc(likesRef);
-
-            if (likesSnap.exists()) {
-                const data = likesSnap.data();
-                setMessageLikes(data);
-            } else {
-                setMessageLikes({});
-            }
-        } catch (error) {
-            console.error("Error loading liked messages:", error);
-        }
-    });
-
-    useEffect(() => {
-        if (currentUser) {
-            loadChatHistory.current();
-            loadLikedMessages.current();
-        } else {
-            setChatHistory([]);
-            setMessageLikes({});
-        }
-    }, [currentUser]);
+    }, [currentUser, loadChatHistory, loadLikedMessages]);
 
     const saveLikedMessages = async (newLikes) => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.log("❌ No user, cannot save liked messages");
+            return;
+        }
 
         try {
+            console.log("💾 Saving liked messages to Firebase...", newLikes);
             const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
             await setDoc(likesRef, newLikes);
+            console.log("✅ Liked messages saved to Firebase successfully");
         } catch (error) {
-            console.error("Error saving liked messages:", error);
+            console.error("❌ Error saving liked messages:", error);
         }
     };
 
-    const saveChatToHistory = useRef(async () => {
-        if (!currentUser || chat.length === 0) return;
+    const saveChatToHistory = useCallback(async (chatToSave = null) => {
+        if (!currentUser) {
+            console.log("❌ No user, cannot save history");
+            return;
+        }
+
+        const chatData = chatToSave || chat;
+        if (chatData.length === 0) {
+            console.log("❌ Empty chat, cannot save history");
+            return;
+        }
 
         try {
+            console.log("💾 Starting to save chat to history...");
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             const historySnap = await getDoc(historyRef);
 
             let sessions = [];
             if (historySnap.exists()) {
                 sessions = historySnap.data().sessions || [];
+                console.log("📂 Found existing sessions:", sessions.length);
             }
 
-            const firstUserMessage = chat.find(msg => msg.sender === "user");
-            const existingIndex = sessions.findIndex(s => {
-                const firstMsg = s.messages.find(msg => msg.sender === "user");
-                return firstMsg?.text === firstUserMessage?.text;
-            });
-
+            const firstUserMessage = chatData.find(msg => msg.sender === "user");
+            const sessionId = Date.now().toString();
+            
             const session = {
-                id: existingIndex >= 0 ? sessions[existingIndex].id : Date.now().toString(),
-                messages: chat.map(msg => ({
+                id: sessionId,
+                messages: chatData.map(msg => ({
                     ...msg,
                     timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
                 })),
@@ -301,68 +292,87 @@ export default function AiChatTab() {
                 preview: firstUserMessage?.text?.substring(0, 50) + "..." || "New conversation"
             };
 
-            if (existingIndex >= 0) {
-                sessions[existingIndex] = session;
-            } else {
-                sessions.unshift(session);
-                sessions = sessions.slice(0, 20);
-            }
+            // Always create a new session instead of updating existing ones
+            sessions.unshift(session);
+            sessions = sessions.slice(0, 20); // Keep only last 20 sessions
 
+            console.log("💾 Saving session:", session);
             await setDoc(historyRef, { sessions });
+            
+            // Update local state
             setChatHistory(sessions);
+            console.log("✅ Chat history saved successfully. Total sessions:", sessions.length);
         } catch (error) {
-            console.error("Error saving chat history:", error);
+            console.error("❌ Error saving chat history:", error);
         }
-    });
+    }, [currentUser, chat]);
 
-    // Save chat to history after each message
+    // Save chat to history when chat changes (with debouncing)
     useEffect(() => {
         if (currentUser && chat.length > 0) {
             const timeoutId = setTimeout(() => {
-                saveChatToHistory.current();
-            }, 1000);
+                saveChatToHistory();
+            }, 2000);
             return () => clearTimeout(timeoutId);
         }
-    }, [chat, currentUser]);
+    }, [chat, currentUser, saveChatToHistory]);
 
-    const loadHistorySession = (session) => {
-        const messagesWithDates = session.messages.map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-        }));
+    const loadHistorySession = async (session) => {
+        console.log("📂 Loading history session:", session.preview);
+        
+        try {
+            const messagesWithDates = session.messages.map(msg => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+            }));
 
-        setChat(messagesWithDates);
-        setShowHistory(false);
-        setShowLiked(false);
-<<<<<<< HEAD
-        setActiveMobileView("chat");
-        setMobileSidebarOpen(false);
-        console.log("📂 Loaded session from history:", session.preview);
-=======
-        setShowMobileSidebar(false);
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
+            setChat(messagesWithDates);
+            setShowHistory(false);
+            setShowLiked(false);
+            setActiveMobileView("chat");
+            setMobileMenuOpen(false);
+            
+            console.log("✅ History session loaded successfully");
+        } catch (error) {
+            console.error("❌ Error loading history session:", error);
+        }
     };
 
-    const loadLikedMessage = (messageId) => {
-        for (const session of chatHistory) {
-            const message = session.messages.find(msg => msg.id === messageId);
-            if (message) {
-                const messageWithDate = {
-                    ...message,
-                    timestamp: new Date(message.timestamp)
-                };
-                setChat([messageWithDate]);
+    const loadLikedMessage = async (messageId) => {
+        console.log("❤️ Loading liked message:", messageId);
+        
+        try {
+            // Search through all history sessions for this message
+            let foundMessage = null;
+            let foundSession = null;
+
+            for (const session of chatHistory) {
+                const message = session.messages.find(msg => msg.id === messageId);
+                if (message) {
+                    foundMessage = message;
+                    foundSession = session;
+                    break;
+                }
+            }
+
+            if (foundMessage && foundSession) {
+                console.log("✅ Found liked message in session:", foundSession.preview);
+                
+                const messagesWithDates = foundSession.messages.map(msg => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                }));
+
+                setChat(messagesWithDates);
                 setShowLiked(false);
                 setShowHistory(false);
-<<<<<<< HEAD
                 setActiveMobileView("chat");
-                setMobileSidebarOpen(false);
-                console.log("✅ Loaded liked message from history");
-=======
-                setShowMobileSidebar(false);
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-                return;
+                setMobileMenuOpen(false);
+            } else {
+                console.log("❌ Liked message not found in any session");
             }
+        } catch (error) {
+            console.error("❌ Error loading liked message:", error);
         }
     };
 
@@ -370,12 +380,14 @@ export default function AiChatTab() {
         if (!currentUser) return;
 
         try {
+            console.log("🗑️ Deleting session:", sessionId);
             const updatedSessions = chatHistory.filter(s => s.id !== sessionId);
             const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
             await setDoc(historyRef, { sessions: updatedSessions });
             setChatHistory(updatedSessions);
+            console.log("✅ Session deleted successfully");
         } catch (error) {
-            console.error("Error deleting session:", error);
+            console.error("❌ Error deleting session:", error);
         }
     };
 
@@ -383,12 +395,14 @@ export default function AiChatTab() {
         if (!currentUser) return;
 
         try {
+            console.log("🗑️ Deleting liked message:", messageId);
             const newLikes = { ...messageLikes };
             delete newLikes[messageId];
             await saveLikedMessages(newLikes);
             setMessageLikes(newLikes);
+            console.log("✅ Liked message deleted successfully");
         } catch (error) {
-            console.error("Error deleting liked message:", error);
+            console.error("❌ Error deleting liked message:", error);
         }
     };
 
@@ -397,11 +411,13 @@ export default function AiChatTab() {
 
         if (window.confirm("Are you sure you want to clear all chat history?")) {
             try {
+                console.log("🗑️ Clearing all history...");
                 const historyRef = doc(db, "users", currentUser.uid, "aiChat", "history");
                 await deleteDoc(historyRef);
                 setChatHistory([]);
+                console.log("✅ All chat history cleared successfully");
             } catch (error) {
-                console.error("Error clearing history:", error);
+                console.error("❌ Error clearing history:", error);
             }
         }
     };
@@ -411,28 +427,41 @@ export default function AiChatTab() {
 
         if (window.confirm("Are you sure you want to clear all liked messages?")) {
             try {
+                console.log("🗑️ Clearing all likes...");
                 const likesRef = doc(db, "users", currentUser.uid, "aiChat", "likes");
                 await deleteDoc(likesRef);
                 setMessageLikes({});
+                console.log("✅ All liked messages cleared successfully");
             } catch (error) {
-                console.error("Error clearing likes:", error);
+                console.error("❌ Error clearing likes:", error);
             }
         }
     };
 
-    const startNewChat = () => {
+    const startNewChat = async () => {
+        console.log("🆕 Starting new chat...");
+        
+        if (currentUser && chat.length > 0) {
+            console.log("💾 Saving current chat before starting new chat...");
+            await saveChatToHistory();
+        }
+        
         setChat([]);
         setShowHistory(false);
         setShowLiked(false);
-        setShowMobileSidebar(false);
-        setEditingMessageId(null);
         setSearchTerm("");
-<<<<<<< HEAD
         setActiveMobileView("chat");
-        setMobileSidebarOpen(false);
-        console.log("🆕 Started new chat");
-=======
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
+        setMobileMenuOpen(false);
+        
+        console.log("✅ New chat started successfully");
+        
+        // Reload data after a short delay to ensure counts are updated
+        if (currentUser) {
+            setTimeout(() => {
+                loadChatHistory();
+                loadLikedMessages();
+            }, 500);
+        }
     };
 
     const checkBackendConnection = async () => {
@@ -497,14 +526,17 @@ export default function AiChatTab() {
         const words = text.split(' ');
         let currentDisplayedText = '';
 
-        for (const word of words) {
-            if (!isStreaming) break;
-            currentDisplayedText += (currentDisplayedText === '' ? '' : ' ') + word;
-
+        // Create a separate function to avoid the loop function warning
+        const updateChatWithText = (textToDisplay) => {
             setChat(prevChat => prevChat.map(msg =>
-                msg.id === messageId ? { ...msg, text: currentDisplayedText } : msg
+                msg.id === messageId ? { ...msg, text: textToDisplay } : msg
             ));
+        };
 
+        for (let i = 0; i < words.length; i++) {
+            if (!isStreaming) break;
+            currentDisplayedText += (currentDisplayedText === '' ? '' : ' ') + words[i];
+            updateChatWithText(currentDisplayedText);
             await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 20));
         }
 
@@ -527,27 +559,6 @@ export default function AiChatTab() {
             setCopiedMessageId(messageId);
             setTimeout(() => setCopiedMessageId(null), 2000);
         }
-    };
-
-    const startEditing = (messageId, currentText) => {
-        setEditingMessageId(messageId);
-        setEditText(currentText);
-    };
-
-    const saveEdit = async () => {
-        if (!editText.trim()) return;
-
-        setChat(chat.map(msg =>
-            msg.id === editingMessageId ? { ...msg, text: editText } : msg
-        ));
-
-        setEditingMessageId(null);
-        setEditText("");
-    };
-
-    const cancelEdit = () => {
-        setEditingMessageId(null);
-        setEditText("");
     };
 
     const toggleVoiceInput = () => {
@@ -599,6 +610,9 @@ export default function AiChatTab() {
 
         if (currentUser) {
             await saveLikedMessages(newLikes);
+            console.log(`❤️ Message ${messageId} ${newLikedState ? 'liked' : 'unliked'}`);
+        } else {
+            console.log("⚠️ User not logged in, like not saved to Firebase");
         }
     };
 
@@ -657,6 +671,7 @@ export default function AiChatTab() {
     const getLikedMessagesWithContent = () => {
         const likedWithContent = [];
 
+        // Add liked messages from current chat
         chat.forEach(message => {
             if (messageLikes[message.id] && message.sender === "ai") {
                 likedWithContent.push({
@@ -667,6 +682,7 @@ export default function AiChatTab() {
             }
         });
 
+        // Add liked messages from history
         chatHistory.forEach(session => {
             session.messages.forEach(message => {
                 if (messageLikes[message.id] && message.sender === "ai" &&
@@ -680,6 +696,7 @@ export default function AiChatTab() {
             });
         });
 
+        console.log("❤️ Found liked messages:", likedWithContent.length);
         return likedWithContent.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     };
 
@@ -716,7 +733,8 @@ export default function AiChatTab() {
                     id: Date.now() + Math.random()
                 };
 
-                setChat([...newChat, aiMessage]);
+                const finalChat = [...newChat, aiMessage];
+                setChat(finalChat);
                 await streamResponse(aiResponse.answer, aiMessage.id);
 
             } catch (error) {
@@ -877,207 +895,139 @@ export default function AiChatTab() {
         });
     };
 
-    // Main App Header Component
-    const AppHeader = () => (
-        <div className={`w-full ${headerBg} transition-colors duration-200`}>
-            <div className="max-w-7xl mx-auto">
-                {/* Top Header Row */}
-                <div className="flex items-center justify-between p-4">
-                    {/* Logo and Title */}
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl shadow-lg">
-                            <Film className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className={`text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent ${theme === 'light' ? 'from-purple-700 to-blue-700' : ''}`}>
-                                CineCoolTV
-                            </h1>
-                            <p className={`text-xs ${textSecondary} mt-1`}>
-                                Your personal media collection
-                            </p>
+    // Navigation handlers
+    const handleNavigation = (tabId, path) => {
+        console.log(`🔄 Navigating to: ${tabId} -> ${path}`);
+        setActiveTab(tabId);
+        setMobileMenuOpen(false);
+        
+        if (path) {
+            navigate(path);
+        }
+    };
+
+    // Handle CineCoolTV logo click - navigate to main chat
+    const handleCineCoolTVClick = () => {
+        setActiveMobileView("chat");
+        setShowHistory(false);
+        setShowLiked(false);
+        setMobileMenuOpen(false);
+        console.log("🎬 CineCoolTV clicked - navigating to main chat");
+    };
+
+    // Enhanced Mobile Header Component
+    const MobileHeader = () => (
+        <div className={`lg:hidden fixed top-0 left-0 right-0 z-50 ${headerBg} p-4 shadow-lg safe-area-top`}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    {/* Logo - Make it clickable */}
+                    <div 
+                        className="relative cursor-pointer"
+                        onClick={handleCineCoolTVClick}
+                    >
+                        <div className="p-2 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 rounded-2xl shadow-lg transform rotate-3">
+                            <Bot className="w-6 h-6 text-white" />
                         </div>
                     </div>
-
-                    {/* Right Side Controls */}
-                    <div className="flex items-center gap-3">
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={toggleTheme}
-                            className={`p-2 rounded-xl transition-colors ${
-                                theme === 'dark' 
-                                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400' 
-                                    : 'bg-gray-700/20 hover:bg-gray-700/30 text-gray-600'
-                            }`}
-                            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                        >
-                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                        </button>
-
-                        {/* Profile Menu */}
-                        {currentUser && (
-                            <div className="relative" ref={profileMenuRef}>
-                                <button
-                                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                                    className={`flex items-center gap-2 p-2 rounded-xl transition-colors ${
-                                        theme === 'dark'
-                                            ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                            : 'bg-gray-200/50 hover:bg-gray-300 text-gray-700'
-                                    }`}
-                                >
-                                    <UserIcon className="w-5 h-5" />
-                                    <span className="text-sm font-medium hidden sm:block">
-                                        {currentUser.email?.split('@')[0]}
-                                    </span>
-                                </button>
-
-                                {/* Profile Dropdown */}
-                                {profileMenuOpen && (
-                                    <div className={`absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg z-50 ${
-                                        theme === 'dark' 
-                                            ? 'bg-gray-800 border border-gray-700' 
-                                            : 'bg-white border border-gray-200'
-                                    }`}>
-                                        <div className="p-2">
-                                            <div className={`px-3 py-2 text-sm ${textSecondary} border-b ${
-                                                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                                            }`}>
-                                                {currentUser.email}
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setProfileMenuOpen(false);
-                                                    // Navigate to settings or handle settings
-                                                }}
-                                                className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                    theme === 'dark'
-                                                        ? 'hover:bg-gray-700 text-gray-300'
-                                                        : 'hover:bg-gray-100 text-gray-700'
-                                                }`}
-                                            >
-                                                <Settings className="w-4 h-4" />
-                                                Settings
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setProfileMenuOpen(false);
-                                                    logout();
-                                                }}
-                                                className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                    theme === 'dark'
-                                                        ? 'hover:bg-red-500/20 text-red-400'
-                                                        : 'hover:bg-red-50 text-red-600'
-                                                }`}
-                                            >
-                                                <LogOut className="w-4 h-4" />
-                                                Sign Out
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Header Menu Button */}
-                        <div className="relative" ref={headerMenuRef}>
-                            <button
-                                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
-                                className={`p-2 rounded-xl transition-colors ${
-                                    theme === 'dark'
-                                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                        : 'bg-gray-200/50 hover:bg-gray-300 text-gray-700'
-                                }`}
+                    <div>
+                        {/* Title and AI Assistant badge */}
+                        <div className="flex items-baseline gap-1">
+                            <h1 
+                                className={`text-lg font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent cursor-pointer`}
+                                onClick={handleCineCoolTVClick}
                             >
-                                <Menu className="w-5 h-5" />
-                            </button>
-
-                            {/* Header Menu Dropdown */}
-                            {headerMenuOpen && (
-                                <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-lg z-50 ${
-                                    theme === 'dark' 
-                                        ? 'bg-gray-800 border border-gray-700' 
-                                        : 'bg-white border border-gray-200'
-                                }`}>
-                                    <div className="p-2">
-                                        <div className={`px-3 py-2 text-sm font-medium ${textPrimary} border-b ${
-                                            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                                        }`}>
-                                            Navigation
-                                        </div>
-                                        
-                                        {/* Navigation Options */}
-                                        <div className="py-1">
-                                            <button className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                theme === 'dark'
-                                                    ? 'hover:bg-gray-700 text-gray-300'
-                                                    : 'hover:bg-gray-100 text-gray-700'
-                                            }`}>
-                                                <Film className="w-4 h-4" />
-                                                Series
-                                            </button>
-                                            <button className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                theme === 'dark'
-                                                    ? 'hover:bg-gray-700 text-gray-300'
-                                                    : 'hover:bg-gray-100 text-gray-700'
-                                            }`}>
-                                                <Zap className="w-4 h-4" />
-                                                Anime
-                                            </button>
-                                            <button className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                theme === 'dark'
-                                                    ? 'hover:bg-purple-500/20 text-purple-400'
-                                                    : 'hover:bg-purple-50 text-purple-600'
-                                            }`}>
-                                                <Bot className="w-4 h-4" />
-                                                AI Chat
-                                            </button>
-                                            <button className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                                                theme === 'dark'
-                                                    ? 'hover:bg-gray-700 text-gray-300'
-                                                    : 'hover:bg-gray-100 text-gray-700'
-                                            }`}>
-                                                <Search className="w-4 h-4" />
-                                                Search
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                CineCoolAI
+                            </h1>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                                theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
+                            }`}>
+                                <Zap className={`w-3 h-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                                <span className={theme === 'dark' ? 'text-green-400' : 'text-green-700'}>AI Assistant</span>
+                            </div>
+                            <div className={`w-2 h-2 rounded-full ${
+                                connectionStatus === 'connected'
+                                    ? 'bg-green-500 shadow-lg shadow-green-500/50'
+                                    : connectionStatus === 'error'
+                                        ? 'bg-red-500 shadow-lg shadow-red-500/50'
+                                        : 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50'
+                            }`} />
                         </div>
                     </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    {chat.length > 0 && (
+                        <button
+                            onClick={startNewChat}
+                            className={`p-2 rounded-xl transition-colors ${
+                                theme === 'dark'
+                                    ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
+                                    : 'bg-green-500/20 hover:bg-green-500/30 text-green-600'
+                            }`}
+                            title="New Chat"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    )}
+                    {/* Mobile Menu Button */}
+                    <button
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className={`p-2 rounded-xl transition-colors ${
+                            theme === 'dark'
+                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
+                        }`}
+                    >
+                        <Menu className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Connection Status Bar */}
+            <div className={`mt-3 px-3 py-2 rounded-xl text-xs font-medium ${
+                connectionStatus === 'connected'
+                    ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                    : connectionStatus === 'error'
+                        ? theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'
+                        : theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+            }`}>
+                <div className="flex items-center justify-between">
+                    <span>
+                        {connectionStatus === 'connected' ? '✅ Connected' :
+                         connectionStatus === 'error' ? '🌐 Local Mode' : '⏳ Connecting...'}
+                    </span>
+                    {connectionStatus === 'error' && (
+                        <button
+                            onClick={checkBackendConnection}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                            Retry
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
     );
 
-    // Mobile Hamburger Menu Component
-    const MobileHamburgerMenu = () => (
-        <div className="lg:hidden">
-            <button
-                onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className={`p-2 rounded-xl transition-colors ${
-                    theme === 'dark'
-                        ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                        : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
-                }`}
-            >
-                <Menu className="w-5 h-5" />
-            </button>
-        </div>
-    );
-
-    // Mobile Sidebar Menu
-    const MobileSidebarMenu = () => (
-        <div className={`lg:hidden fixed inset-0 z-50 transition-transform duration-300 ${
-            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
+    // FIXED: Enhanced Mobile Navigation Menu with proper scrolling and single AI Chat
+    const MobileNavigationMenu = () => (
+        <div 
+            ref={mobileMenuRef}
+            className={`lg:hidden fixed inset-0 z-[99999] pointer-events-auto transition-transform duration-300 ${
+                mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+        >
             {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-black/50"
-                onClick={() => setMobileSidebarOpen(false)}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setMobileMenuOpen(false)}
             />
             
-            {/* Sidebar Content */}
-            <div className={`absolute left-0 top-0 bottom-0 w-80 ${sidebarBg} rounded-r-3xl overflow-hidden`}>
+            {/* Menu Content */}
+            <div className={`absolute left-0 top-0 bottom-0 w-80 ${sidebarBg} rounded-r-3xl overflow-hidden border-r ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} shadow-2xl`}>
                 <div className="p-6 h-full flex flex-col">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-8">
@@ -1086,15 +1036,15 @@ export default function AiChatTab() {
                                 <Bot className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className={`text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent`}>
-                                    CineCoolAI
+                                <h1 className={`text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent`}>
+                                    CineCoolTV
                                 </h1>
-                                <p className={`text-xs ${textSecondary}`}>Menu</p>
+                                <p className={`text-xs ${textSecondary} mt-1`}>Your Entertainment Hub</p>
                             </div>
                         </div>
                         <button
-                            onClick={() => setMobileSidebarOpen(false)}
-                            className={`p-2 rounded-xl ${
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`p-2 rounded-xl transition-all hover:scale-110 ${
                                 theme === 'dark'
                                     ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
                                     : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
@@ -1104,112 +1054,249 @@ export default function AiChatTab() {
                         </button>
                     </div>
 
-                    {/* Navigation Items */}
-                    <div className="space-y-2 flex-1">
+                    {/* Navigation Items - FIXED: Scrollable container */}
+                    <div className="flex-1 overflow-y-auto space-y-3">
+                        {/* Main Navigation */}
+                        {navigationTabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => handleNavigation(tab.id, tab.path)}
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                    activeTab === tab.id
+                                        ? theme === 'dark'
+                                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transform scale-105'
+                                            : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg transform scale-105'
+                                        : theme === 'dark'
+                                            ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 hover:text-white hover:scale-105'
+                                            : 'bg-white/60 hover:bg-white text-gray-700 hover:text-gray-900 hover:scale-105'
+                                }`}
+                            >
+                                <div className={`p-2 rounded-xl transition-all ${
+                                    activeTab === tab.id 
+                                        ? 'bg-white/20' 
+                                        : theme === 'dark' 
+                                            ? 'bg-gray-600/50 group-hover:bg-gray-600' 
+                                            : 'bg-gray-100 group-hover:bg-gray-200'
+                                }`}>
+                                    <tab.icon className={`w-5 h-5 ${
+                                        activeTab === tab.id ? 'text-white' : theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                    }`} />
+                                </div>
+                                <span className="font-semibold text-base">{tab.label}</span>
+                                {activeTab === tab.id && (
+                                    <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
+                                )}
+                            </button>
+                        ))}
+
+                        <div className="my-6 border-t border-gray-300/30"></div>
+
+                        {/* Theme Toggle in Menu */}
                         <button
                             onClick={() => {
-                                setActiveMobileView("chat");
-                                setMobileSidebarOpen(false);
+                                toggleTheme();
+                                setMobileMenuOpen(false);
                             }}
-                            className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${
-                                activeMobileView === "chat"
-                                    ? theme === 'dark'
-                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                                        : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
-                                    : theme === 'dark'
-                                        ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300'
-                                        : 'bg-white/60 hover:bg-white text-gray-700'
+                            className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                theme === 'dark'
+                                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 hover:text-yellow-300 hover:scale-105'
+                                    : 'bg-gray-700/20 hover:bg-gray-700/30 text-gray-600 hover:text-gray-800 hover:scale-105'
                             }`}
                         >
-                            <MessageCircle className="w-5 h-5" />
-                            <span className="font-medium">Chat</span>
+                            <div className={`p-2 rounded-xl ${
+                                theme === 'dark' ? 'bg-yellow-500/20' : 'bg-gray-600/20'
+                            }`}>
+                                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                            </div>
+                            <span className="font-semibold text-base">
+                                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                            </span>
                         </button>
 
-                        {currentUser && (
-                            <>
-                                <button
-                                    onClick={() => {
-                                        setActiveMobileView("history");
-                                        setMobileSidebarOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${
-                                        activeMobileView === "history"
-                                            ? theme === 'dark'
-                                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                                                : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300'
-                                                : 'bg-white/60 hover:bg-white text-gray-700'
-                                    }`}
-                                >
-                                    <History className="w-5 h-5" />
-                                    <span className="font-medium">History</span>
-                                    {chatHistory.length > 0 && (
-                                        <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
-                                            theme === 'dark' ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
-                                        }`}>
-                                            {chatHistory.length}
-                                        </span>
-                                    )}
-                                </button>
+                        <div className="my-6 border-t border-gray-300/30"></div>
 
-                                <button
-                                    onClick={() => {
-                                        setActiveMobileView("liked");
-                                        setMobileSidebarOpen(false);
-                                    }}
-                                    className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${
-                                        activeMobileView === "liked"
-                                            ? theme === 'dark'
-                                                ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg'
-                                                : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300'
-                                                : 'bg-white/60 hover:bg-white text-gray-700'
-                                    }`}
-                                >
-                                    <Star className="w-5 h-5" />
-                                    <span className="font-medium">Liked</span>
-                                    {likedMessagesWithContent.length > 0 && (
-                                        <span className={`ml-auto text-xs px-2 py-1 rounded-full ${
-                                            theme === 'dark' ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
-                                        }`}>
-                                            {likedMessagesWithContent.length}
-                                        </span>
-                                    )}
-                                </button>
-                            </>
-                        )}
+                        {/* FIXED: AI Chat Features Section - Only one AI Chat entry */}
+                        <div className="space-y-3">
+                            <div className={`px-3 py-2 ${theme === 'dark' ? 'bg-purple-500/10' : 'bg-purple-50'} rounded-xl`}>
+                                <p className={`text-xs font-semibold ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                                    AI CHAT FEATURES
+                                </p>
+                            </div>
 
-                        <button
-                            onClick={() => {
-                                setActiveMobileView("tips");
-                                setMobileSidebarOpen(false);
-                            }}
-                            className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${
-                                activeMobileView === "tips"
-                                    ? theme === 'dark'
-                                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
-                                        : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                                    : theme === 'dark'
-                                        ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300'
-                                        : 'bg-white/60 hover:bg-white text-gray-700'
-                            }`}
-                        >
-                            <Lightbulb className="w-5 h-5" />
-                            <span className="font-medium">Tips</span>
-                        </button>
+                            {/* FIXED: Only one AI Chat button that navigates to main chat */}
+                            <button
+                                onClick={() => {
+                                    setActiveMobileView("chat");
+                                    setShowHistory(false);
+                                    setShowLiked(false);
+                                    setMobileMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                    activeMobileView === "chat"
+                                        ? theme === 'dark'
+                                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transform scale-105'
+                                            : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg transform scale-105'
+                                        : theme === 'dark'
+                                            ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 hover:text-white hover:scale-105'
+                                            : 'bg-white/60 hover:bg-white text-gray-700 hover:text-gray-900 hover:scale-105'
+                                }`}
+                            >
+                                <div className={`p-2 rounded-xl ${
+                                    activeMobileView === "chat" 
+                                        ? 'bg-white/20' 
+                                        : theme === 'dark' 
+                                            ? 'bg-gray-600/50 group-hover:bg-gray-600' 
+                                            : 'bg-gray-100 group-hover:bg-gray-200'
+                                }`}>
+                                    <Bot className={`w-5 h-5 ${
+                                        activeMobileView === "chat" ? 'text-white' : theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                    }`} />
+                                </div>
+                                <span className="font-semibold text-base">New Chat</span>
+                                {activeMobileView === "chat" && (
+                                    <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse" />
+                                )}
+                            </button>
+
+                            {currentUser && (
+                                <>
+                                    <button
+                                        onClick={async () => {
+                                            setActiveMobileView("history");
+                                            setShowHistory(true);
+                                            setShowLiked(false);
+                                            await loadChatHistory();
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                            activeMobileView === "history"
+                                                ? theme === 'dark'
+                                                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg transform scale-105'
+                                                    : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg transform scale-105'
+                                                : theme === 'dark'
+                                                    ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 hover:text-white hover:scale-105'
+                                                    : 'bg-white/60 hover:bg-white text-gray-700 hover:text-gray-900 hover:scale-105'
+                                        }`}
+                                    >
+                                        <div className={`p-2 rounded-xl ${
+                                            activeMobileView === "history" 
+                                                ? 'bg-white/20' 
+                                                : theme === 'dark' 
+                                                    ? 'bg-gray-600/50 group-hover:bg-gray-600' 
+                                                    : 'bg-gray-100 group-hover:bg-gray-200'
+                                        }`}>
+                                            <History className={`w-5 h-5 ${
+                                                activeMobileView === "history" ? 'text-white' : theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                            }`} />
+                                        </div>
+                                        <span className="font-semibold text-base">History</span>
+                                        {chatHistory.length > 0 && (
+                                            <span className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${
+                                                theme === 'dark' ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
+                                            }`}>
+                                                {chatHistory.length}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            setActiveMobileView("liked");
+                                            setShowLiked(true);
+                                            setShowHistory(false);
+                                            await loadLikedMessages();
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                            activeMobileView === "liked"
+                                                ? theme === 'dark'
+                                                    ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg transform scale-105'
+                                                    : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg transform scale-105'
+                                                : theme === 'dark'
+                                                    ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 hover:text-white hover:scale-105'
+                                                    : 'bg-white/60 hover:bg-white text-gray-700 hover:text-gray-900 hover:scale-105'
+                                        }`}
+                                    >
+                                        <div className={`p-2 rounded-xl ${
+                                            activeMobileView === "liked" 
+                                                ? 'bg-white/20' 
+                                                : theme === 'dark' 
+                                                    ? 'bg-gray-600/50 group-hover:bg-gray-600' 
+                                                    : 'bg-gray-100 group-hover:bg-gray-200'
+                                        }`}>
+                                            <Star className={`w-5 h-5 ${
+                                                activeMobileView === "liked" ? 'text-white' : theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                            }`} />
+                                        </div>
+                                        <span className="font-semibold text-base">Liked</span>
+                                        {likedMessagesWithContent.length > 0 && (
+                                            <span className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${
+                                                theme === 'dark' ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'
+                                            }`}>
+                                                {likedMessagesWithContent.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+
+                            <button
+                                onClick={() => {
+                                    setActiveMobileView("tips");
+                                    setShowHistory(false);
+                                    setShowLiked(false);
+                                    setMobileMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                                    activeMobileView === "tips"
+                                        ? theme === 'dark'
+                                            ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg transform scale-105'
+                                            : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg transform scale-105'
+                                        : theme === 'dark'
+                                            ? 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 hover:text-white hover:scale-105'
+                                            : 'bg-white/60 hover:bg-white text-gray-700 hover:text-gray-900 hover:scale-105'
+                                }`}
+                            >
+                                <div className={`p-2 rounded-xl ${
+                                    activeMobileView === "tips" 
+                                        ? 'bg-white/20' 
+                                        : theme === 'dark' 
+                                            ? 'bg-gray-600/50 group-hover:bg-gray-600' 
+                                            : 'bg-gray-100 group-hover:bg-gray-200'
+                                }`}>
+                                    <Zap className={`w-5 h-5 ${
+                                        activeMobileView === "tips" ? 'text-white' : theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                    }`} />
+                                </div>
+                                <span className="font-semibold text-base">Tips</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Footer */}
                     <div className={`pt-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`}>
-                        <div className={`text-center text-xs ${textSecondary}`}>
-                            <p>CineCoolAI Assistant</p>
-                            <p className="mt-1">Your AI Film & TV Expert</p>
+                        <div className={`text-center text-sm ${textSecondary}`}>
+                            <p className="font-semibold">CineCoolAI Assistant</p>
+                            <p className="mt-1 text-xs">Your AI Film & TV Expert</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+
+    // Enhanced Mobile Welcome Header
+    const MobileWelcomeHeader = () => (
+        <div className="text-center py-8 px-6">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                <Bot className="w-8 h-8 text-white" />
+            </div>
+            <h3 className={`text-xl font-bold ${titleColor} mb-2`}>
+                CineCoolAI
+            </h3>
+            <p className={`${textSecondary} mb-6 text-sm leading-relaxed max-w-md mx-auto`}>
+                Your AI film & TV analyst. Ask about characters, shows, or get recommendations.
+            </p>
         </div>
     );
 
@@ -1261,25 +1348,10 @@ export default function AiChatTab() {
                     )}
                 </button>
             </div>
-            <div className="flex justify-between items-center mt-2 px-1">
-                <span className={`text-xs ${textSecondary}`}>
-                    {isListening && <span className="text-red-500 font-semibold">🎤 Listening...</span>}
-                </span>
-                <span className={`text-xs ${
-                    connectionStatus === 'connected'
-                        ? theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                        : connectionStatus === 'error'
-                            ? theme === 'dark' ? 'text-red-400' : 'text-red-600'
-                            : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
-                }`}>
-                    {connectionStatus === 'connected' ? '✅ Connected' :
-                     connectionStatus === 'error' ? '🌐 Local Mode' : '⏳ Connecting'}
-                </span>
-            </div>
         </div>
     );
 
-    // ChatGPT-style Mobile Chat Message
+    // FIXED: Enhanced Mobile Chat Message with better UI
     const MobileChatMessage = ({ msg, index }) => (
         <div
             key={index}
@@ -1308,10 +1380,36 @@ export default function AiChatTab() {
                     {msg.sender === "user" ? (
                         <div className="space-y-3">
                             <div className="text-white text-base leading-relaxed">{msg.text}</div>
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => copyToClipboard(msg.text, msg.id)}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
+                                        theme === 'dark'
+                                            ? 'bg-blue-500/30 hover:bg-blue-500/40 text-blue-300'
+                                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-700'
+                                    } ${copiedMessageId === msg.id ? 'bg-green-500/20 text-green-600' : ''}`}
+                                    title="Copy message"
+                                >
+                                    {copiedMessageId === msg.id ? (
+                                        <>
+                                            <Check className="w-3 h-3" />
+                                            Copied!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy className="w-3 h-3" />
+                                            Copy
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {renderText(msg.text)}
+                            {/* FIXED: Better text rendering */}
+                            <div className="text-base leading-relaxed">
+                                {renderText(msg.text)}
+                            </div>
 
                             {/* Action Buttons for AI Messages */}
                             <div className="flex flex-wrap gap-2 justify-between items-center mt-4 pt-3 border-t border-gray-300/30">
@@ -1381,19 +1479,12 @@ export default function AiChatTab() {
 
     // Enhanced Mobile Welcome Screen
     const MobileWelcomeScreen = () => (
-        <div className="text-center py-12 px-6">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                <Bot className="w-10 h-10 text-white" />
-            </div>
-            <h3 className={`text-2xl font-bold ${titleColor} mb-3`}>
-                CineCoolAI
-            </h3>
-            <p className={`${textSecondary} mb-8 text-base leading-relaxed max-w-md mx-auto`}>
-                Your AI film & TV analyst. Ask about characters, shows, or get recommendations.
-            </p>
+        <div className="text-center">
+            {/* Welcome Header */}
+            <MobileWelcomeHeader />
 
             {/* Quick Suggestions */}
-            <div className="grid grid-cols-1 gap-3 mb-8">
+            <div className="grid grid-cols-1 gap-3 mb-8 px-6">
                 {suggestions.slice(0, 4).map((suggestion, index) => (
                     <button
                         key={index}
@@ -1410,7 +1501,7 @@ export default function AiChatTab() {
                 ))}
             </div>
 
-            <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-2xl p-4`}>
+            <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-2xl p-4 mx-6`}>
                 <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-2 justify-center`}>
                     <Zap className="w-5 h-5" />
                     <span className="text-sm font-semibold">AI + TMDB Powered</span>
@@ -1445,12 +1536,49 @@ export default function AiChatTab() {
                                     </button>
                                 )}
                             </div>
+                            
+                            {/* Search Bar for History */}
+                            {chatHistory.length > 0 && (
+                                <div className="relative mb-4">
+                                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search conversations..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={`w-full pl-10 pr-4 py-2 rounded-xl border ${
+                                            theme === 'dark'
+                                                ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
+                                                : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500'
+                                        } focus:outline-none focus:border-purple-500`}
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="flex-1 overflow-y-auto">
                                 {filteredHistory.length === 0 ? (
                                     <div className={`text-center py-8 ${textSecondary}`}>
-                                        <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                        <p className="text-sm">No chat history yet</p>
-                                        <p className="text-xs mt-1">Start a conversation!</p>
+                                        {searchTerm ? (
+                                            <>
+                                                <SearchIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No conversations found</p>
+                                                <p className="text-xs mt-1">Try different search terms</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">No chat history yet</p>
+                                                <p className="text-xs mt-1">Start a conversation!</p>
+                                            </>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -1469,9 +1597,20 @@ export default function AiChatTab() {
                                                 </p>
                                                 <div className="flex items-center justify-between">
                                                     <p className={`text-xs ${textSecondary}`}>
-                                                        {new Date(session.timestamp).toLocaleDateString()}
+                                                        {new Date(session.timestamp).toLocaleDateString()} • {session.messages.length} messages
                                                     </p>
-                                                    <Clock className="w-3 h-3 text-gray-400" />
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-3 h-3 text-gray-400" />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                deleteHistorySession(session.id);
+                                                            }}
+                                                            className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -1524,8 +1663,24 @@ export default function AiChatTab() {
                                                     <p className={`text-xs ${textSecondary}`}>
                                                         {formatDate(message.timestamp)}
                                                     </p>
-                                                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                                    <div className="flex items-center gap-2">
+                                                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                deleteLikedMessage(message.id);
+                                                            }}
+                                                            className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                {message.sessionPreview && message.sessionPreview !== "Current conversation" && (
+                                                    <p className={`text-xs ${textSecondary} mt-1`}>
+                                                        From: {message.sessionPreview}
+                                                    </p>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -1538,7 +1693,7 @@ export default function AiChatTab() {
                     return (
                         <div className="h-full flex flex-col">
                             <div className="flex items-center gap-2 mb-4">
-                                <Lightbulb className={`w-5 h-5 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                                <Zap className={`w-5 h-5 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
                                 <h3 className={`font-semibold ${titleColor}`}>Pro Tips</h3>
                             </div>
                             <div className="space-y-4 mb-6">
@@ -1702,56 +1857,16 @@ export default function AiChatTab() {
                 }`}>
                     {msg.sender === "user" ? (
                         <div className="space-y-3">
-                            {editingMessageId === msg.id ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editText}
-                                        onChange={(e) => setEditText(e.target.value)}
-                                        className={`w-full p-2 rounded border ${
-                                            theme === 'dark'
-                                                ? 'bg-gray-600 border-gray-500 text-white'
-                                                : 'bg-white border-gray-300 text-gray-900'
-                                        }`}
-                                        rows="3"
-                                    />
-                                    <div className="flex gap-2 justify-end">
-                                        <button
-                                            onClick={saveEdit}
-                                            className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded text-sm"
-                                        >
-                                            <Save className="w-3 h-3" />
-                                            Save
-                                        </button>
-                                        <button
-                                            onClick={cancelEdit}
-                                            className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded text-sm"
-                                        >
-                                            <X className="w-3 h-3" />
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="text-white">{msg.text}</div>
-                                    <div className="flex gap-1 justify-end">
-                                        <button
-                                            onClick={() => startEditing(msg.id, msg.text)}
-                                            className="p-1 hover:bg-blue-400/30 rounded transition-colors"
-                                            title="Edit message"
-                                        >
-                                            <Edit className="w-3 h-3 text-white" />
-                                        </button>
-                                        <button
-                                            onClick={() => copyToClipboard(msg.text, msg.id)}
-                                            className="p-1 hover:bg-blue-400/30 rounded transition-colors"
-                                            title="Copy message"
-                                        >
-                                            <Copy className="w-3 h-3 text-white" />
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                            <div className="text-white">{msg.text}</div>
+                            <div className="flex gap-1 justify-end">
+                                <button
+                                    onClick={() => copyToClipboard(msg.text, msg.id)}
+                                    className="p-1 hover:bg-blue-400/30 rounded transition-colors"
+                                    title="Copy message"
+                                >
+                                    <Copy className="w-3 h-3 text-white" />
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -1823,404 +1938,139 @@ export default function AiChatTab() {
         </div>
     );
 
-    // Mobile sidebar component
-    const MobileSidebar = () => (
-        <div className="lg:hidden fixed inset-0 z-50">
-            <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setShowMobileSidebar(false)}
-            />
-            <div className={`absolute right-0 top-0 h-full w-80 ${sidebarBg} overflow-y-auto`}>
-                <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className={`font-semibold ${titleColor} flex items-center gap-2`}>
-                            {showLiked ? <Star className="w-5 h-5" /> : <History className="w-5 h-5" />}
-                            {showLiked ? 'Liked Responses' : 'Chat History'}
-                        </h3>
-                        <button
-                            onClick={() => setShowMobileSidebar(false)}
-                            className="p-2 rounded-lg hover:bg-gray-500/20"
-                        >
-                            <CloseIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Search Bar */}
-                    {(showHistory && chatHistory.length > 0) && (
-                        <div className="relative mb-4">
-                            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search conversations..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                                    theme === 'dark'
-                                        ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-                                        : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500'
-                                } focus:outline-none focus:border-purple-500`}
-                            />
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {showLiked ? (
-                        likedMessagesWithContent.length === 0 ? (
-                            <div className={`text-center py-8 ${textSecondary}`}>
-                                <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">No liked responses yet</p>
-                                <p className="text-xs mt-1">Click the like button on any AI response to save it here</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {likedMessagesWithContent.map((message) => (
-                                    <div
-                                        key={message.id}
-                                        className={`p-3 rounded-xl transition-all border ${
-                                            theme === 'dark'
-                                                ? 'bg-gray-700/30 border-gray-600/30'
-                                                : 'bg-white/60 border-gray-200/60'
-                                        }`}
-                                    >
-                                        <div
-                                            onClick={() => {
-                                                loadLikedMessage(message.id);
-                                                setShowMobileSidebar(false);
-                                            }}
-                                            className="flex-1 cursor-pointer"
-                                        >
-                                            <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
-                                                {message.text.substring(0, 80)}...
-                                            </p>
-                                            <div className="flex items-center justify-between">
-                                                <p className={`text-xs ${textSecondary}`}>
-                                                    {formatDate(message.timestamp)}
-                                                </p>
-                                                <div className="flex items-center gap-1">
-                                                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                                                    <span className="text-xs text-yellow-500">Liked</span>
-                                                </div>
-                                            </div>
-                                            {message.sessionPreview && (
-                                                <p className={`text-xs ${textSecondary} mt-1`}>
-                                                    From: {message.sessionPreview}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteLikedMessage(message.id);
-                                            }}
-                                            className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                                            title="Remove from liked"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )
-                    ) : (
-                        filteredHistory.length === 0 ? (
-                            <div className={`text-center py-8 ${textSecondary}`}>
-                                {searchTerm ? (
-                                    <>
-                                        <SearchIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                        <p className="text-sm">No conversations found</p>
-                                        <p className="text-xs mt-1">Try different search terms</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <History className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                        <p className="text-sm">No chat history yet</p>
-                                        <p className="text-xs mt-1">Start a conversation!</p>
-                                    </>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {filteredHistory.map((session) => (
-                                    <div
-                                        key={session.id}
-                                        className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                                            theme === 'dark'
-                                                ? 'bg-gray-700/30 hover:bg-gray-700/50 border-gray-600/30'
-                                                : 'bg-white/60 hover:bg-white border-gray-200/60'
-                                        }`}
-                                    >
-                                        <div
-                                            onClick={() => {
-                                                loadHistorySession(session);
-                                                setShowMobileSidebar(false);
-                                            }}
-                                            className="flex-1"
-                                        >
-                                            <p className={`text-sm font-medium ${titleColor} line-clamp-2 mb-1`}>
-                                                {session.preview}
-                                            </p>
-                                            <div className="flex items-center justify-between">
-                                                <p className={`text-xs ${textSecondary}`}>
-                                                    {new Date(session.timestamp).toLocaleDateString()} • {session.messages.length} messages
-                                                </p>
-                                                <Clock className="w-3 h-3 text-gray-400" />
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteHistorySession(session.id);
-                                            }}
-                                            className={`mt-2 p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                                            title="Delete session"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-<<<<<<< HEAD
         <div className={`flex flex-col min-h-screen ${bgGradient} ${textPrimary}`}>
-            {/* Main App Header */}
-            <AppHeader />
+            {/* Mobile Header */}
+            <MobileHeader />
 
-            {/* Enhanced Mobile AI Chat Header */}
-            <div className={`lg:hidden fixed top-0 left-0 right-0 z-50 ${headerBg} p-4 shadow-lg safe-area-top`}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {/* Creative Logo Container */}
-                        <div className="relative">
-                            <div className="p-2 bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 rounded-2xl shadow-lg transform rotate-3">
-                                <Film className="w-6 h-6 text-white" />
+            {/* Mobile Navigation Menu */}
+            <MobileNavigationMenu />
+
+            {/* SIMPLIFIED Desktop AI Chat Header - One Line Only */}
+            <div className={`hidden lg:block ${headerBg} p-2 sticky top-0 z-30 shadow-sm`}>
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex items-center justify-between">
+                        {/* Left side - AI Assistant info */}
+                        <div className="flex items-center gap-3">
+                            <div 
+                                className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl cursor-pointer"
+                                onClick={handleCineCoolTVClick}
+                            >
+                                <Bot className="w-5 h-5 text-white" />
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-sm"></div>
-                        </div>
-                        <div>
-                            {/* Creative Typography */}
-                            <div className="flex items-baseline gap-1">
-                                <h1 className={`text-lg font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent`}>
-                                    CineCoolAI
+                            <div>
+                                <h1 
+                                    className={`text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent cursor-pointer`}
+                                    onClick={handleCineCoolTVClick}
+                                >
+                                    CineCoolAI Assistant
                                 </h1>
-                                <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-1.5 py-0.5 rounded-full font-medium">
-                                    AI
-                                </span>
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                                    theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-                                }`}>
-                                    <Zap className={`w-3 h-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                                    <span className={theme === 'dark' ? 'text-green-400' : 'text-green-700'}>Ai Assistant</span>
-                                </div>
+                            <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${
                                     connectionStatus === 'connected'
-                                        ? 'bg-green-500 shadow-lg shadow-green-500/50'
+                                        ? 'bg-green-500'
                                         : connectionStatus === 'error'
-                                            ? 'bg-red-500 shadow-lg shadow-red-500/50'
-                                            : 'bg-yellow-500 animate-pulse shadow-lg shadow-yellow-500/50'
+                                            ? 'bg-red-500'
+                                            : 'bg-yellow-500 animate-pulse'
                                 }`} />
+                                <span className={`text-xs font-medium ${
+                                    connectionStatus === 'connected'
+                                        ? theme === 'dark' ? 'text-green-400' : 'text-green-700'
+                                        : connectionStatus === 'error'
+                                            ? theme === 'dark' ? 'text-red-400' : 'text-red-700'
+                                            : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'
+                                }`}>
+                                    {connectionStatus === 'connected'
+                                        ? 'Connected'
+                                        : connectionStatus === 'error'
+                                            ? `Offline${retryCount > 0 ? ` (${retryCount})` : ''}`
+                                            : 'Checking'}
+                                </span>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        {chat.length > 0 && (
+
+                        {/* Right side - Action buttons only */}
+                        <div className="flex items-center gap-2">
+                            {/* Export Button */}
+                            {chat.length > 0 && (
+                                <button
+                                    onClick={() => exportConversation('txt')}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                        theme === 'dark'
+                                            ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
+                                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-600'
+                                    }`}
+                                    title="Export conversation"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span>Export</span>
+                                </button>
+                            )}
+                            {/* New Chat Button */}
                             <button
                                 onClick={startNewChat}
-                                className={`p-2 rounded-xl transition-colors ${
+                                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
                                     theme === 'dark'
                                         ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
                                         : 'bg-green-500/20 hover:bg-green-500/30 text-green-600'
                                 }`}
-                                title="New Chat"
+                                title="Start a new chat"
                             >
-                                <Plus className="w-5 h-5" />
+                                <Plus className="w-4 h-4" />
+                                <span>New Chat</span>
                             </button>
-                        )}
-                        {/* Hamburger Menu Button */}
-                        <MobileHamburgerMenu />
-                    </div>
-                </div>
-            </div>
-
-            {/* Desktop AI Chat Header */}
-            <div className={`hidden lg:block ${headerBg} p-6 sticky top-0 z-30 shadow-sm`}>
-=======
-        <div className={`flex flex-col h-screen ${bgGradient} ${textPrimary}`}>
-            {/* Mobile Sidebar */}
-            {showMobileSidebar && <MobileSidebar />}
-
-            {/* Header with Connection Status */}
-            <div className={`${headerBg} p-4 sm:p-6`}>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl">
-                                <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent ${theme === 'light' ? 'from-purple-700 to-blue-700' : ''}`}>
-                                    CineCoolAI
-                                </h1>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                                        theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-                                    }`}>
-                                        <Zap className={`w-3 h-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
-                                        <span className={`font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>Movie & TV Expert</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className={`w-2 h-2 rounded-full ${
-                                            connectionStatus === 'connected'
-                                                ? 'bg-green-500'
-                                                : connectionStatus === 'error'
-                                                    ? 'bg-red-500'
-                                                    : 'bg-yellow-500 animate-pulse'
-                                        }`} />
-                                        <span className={`text-xs font-medium ${
-                                            connectionStatus === 'connected'
-                                                ? theme === 'dark' ? 'text-green-400' : 'text-green-700'
-                                                : connectionStatus === 'error'
-                                                    ? theme === 'dark' ? 'text-red-400' : 'text-red-700'
-                                                    : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'
-                                        }`}>
-                                            {connectionStatus === 'connected'
-                                                ? 'Connected'
-                                                : connectionStatus === 'error'
-                                                    ? `Offline${retryCount > 0 ? ` (${retryCount})` : ''}`
-                                                    : 'Checking'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-<<<<<<< HEAD
-                        <div className="hidden lg:flex items-center gap-2">
-                            {/* Export Button */}
-                            {chat.length > 0 && (
-=======
-
-                        {/* Mobile Menu Button */}
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setShowMobileSidebar(true)}
-                                className="lg:hidden p-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 transition-colors"
-                            >
-                                <Menu className="w-5 h-5" />
-                            </button>
-
-                            {/* Desktop buttons */}
-                            <div className="hidden lg:flex items-center gap-2">
-                                {/* Export Button */}
-                                {chat.length > 0 && (
-                                    <button
-                                        onClick={() => exportConversation('txt')}
-                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                            theme === 'dark'
-                                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
-                                                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-600'
-                                        }`}
-                                        title="Export conversation"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Export</span>
-                                    </button>
-                                )}
-                                {/* New Chat Button */}
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
+                            {/* Liked Button */}
+                            {currentUser && (
                                 <button
-                                    onClick={startNewChat}
+                                    onClick={async () => {
+                                        setShowLiked(!showLiked);
+                                        setShowHistory(false);
+                                        if (!showLiked) {
+                                            await loadLikedMessages();
+                                        }
+                                    }}
                                     className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                        theme === 'dark'
-                                            ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
-                                            : 'bg-green-500/20 hover:bg-green-500/30 text-green-600'
+                                        showLiked
+                                            ? 'bg-yellow-500/30 text-yellow-400'
+                                            : theme === 'dark'
+                                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                                : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
                                     }`}
-                                    title="Start a new chat"
                                 >
-                                    <Plus className="w-4 h-4" />
-                                    <span className="hidden sm:inline">New Chat</span>
+                                    <Star className="w-4 h-4" />
+                                    <span>Liked ({likedMessagesWithContent.length})</span>
                                 </button>
-                                {/* Liked Button */}
-                                {currentUser && (
-                                    <button
-                                        onClick={() => {
-                                            setShowLiked(!showLiked);
-                                            setShowHistory(false);
-                                        }}
-                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                            showLiked
-                                                ? 'bg-yellow-500/30 text-yellow-400'
-                                                : theme === 'dark'
-                                                    ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                                    : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
-                                        }`}
-                                    >
-                                        <Star className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Liked ({likedMessagesWithContent.length})</span>
-                                    </button>
-                                )}
-                                {/* History Button */}
-                                {currentUser && (
-                                    <button
-                                        onClick={() => {
-                                            setShowHistory(!showHistory);
-                                            setShowLiked(false);
-                                        }}
-                                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
-                                            showHistory
-                                                ? 'bg-purple-500/30 text-purple-400'
-                                                : theme === 'dark'
-                                                    ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
-                                                    : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
-                                        }`}
-                                    >
-                                        <History className="w-4 h-4" />
-                                        <span className="hidden sm:inline">History ({chatHistory.length})</span>
-                                    </button>
-                                )}
-                            </div>
-
-                            {connectionStatus === 'error' && (
+                            )}
+                            {/* History Button */}
+                            {currentUser && (
                                 <button
-                                    onClick={checkBackendConnection}
-                                    className="hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 text-sm transition-colors"
+                                    onClick={async () => {
+                                        setShowHistory(!showHistory);
+                                        setShowLiked(false);
+                                        if (!showHistory) {
+                                            await loadChatHistory();
+                                        }
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-colors ${
+                                        showHistory
+                                            ? 'bg-purple-500/30 text-purple-400'
+                                            : theme === 'dark'
+                                                ? 'bg-gray-700/50 hover:bg-gray-700 text-gray-300'
+                                                : 'bg-gray-200/50 hover:bg-gray-200 text-gray-700'
+                                    }`}
                                 >
-                                    <RefreshCw className="w-3 h-3" />
-                                    Retry
+                                    <History className="w-4 h-4" />
+                                    <span>History ({chatHistory.length})</span>
                                 </button>
                             )}
                         </div>
                     </div>
-<<<<<<< HEAD
-                    <p className={`${textSecondary} text-sm hidden lg:block`}>
-=======
-                    <p className={`${textSecondary} text-xs sm:text-sm`}>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-                        Character psychology • Show comparisons • Genre deep dives • Writing analysis • Recommendations
-                        {currentUser && <span className="ml-2">• 💾 History saved automatically</span>}
-                    </p>
                 </div>
             </div>
 
-<<<<<<< HEAD
             {/* Main Content */}
-            <div className="flex-1 flex max-w-7xl mx-auto w-full p-4 gap-6 mt-16 lg:mt-0">
+            <div className="flex-1 flex max-w-7xl mx-auto w-full p-4 gap-6 mt-16 lg:mt-2">
                 {/* Desktop Sidebars */}
                 {(currentUser && (showHistory || showLiked)) && (
                     <div className={`w-80 hidden lg:block ${sidebarBg} rounded-2xl p-4 overflow-y-auto`}>
@@ -2236,74 +2086,6 @@ export default function AiChatTab() {
                                             onClick={clearAllHistory}
                                             className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
                                             title="Clear all history"
-=======
-            <div className="flex-1 flex max-w-7xl mx-auto w-full p-2 sm:p-4 gap-4 sm:gap-6">
-                {/* History/Liked Sidebar - Desktop */}
-                {(currentUser && (showHistory || showLiked)) && (
-                    <div className={`hidden lg:block w-80 ${sidebarBg} rounded-2xl p-4 overflow-y-auto`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className={`font-semibold ${titleColor} flex items-center gap-2`}>
-                                {showLiked ? <Star className="w-5 h-5" /> : <History className="w-5 h-5" />}
-                                {showLiked ? 'Liked Responses' : 'Chat History'}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                {((showLiked && likedMessagesWithContent.length > 0) ||
-                                    (showHistory && chatHistory.length > 0)) && (
-                                    <button
-                                        onClick={showLiked ? clearAllLikes : clearAllHistory}
-                                        className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                                        title={`Clear all ${showLiked ? 'likes' : 'history'}`}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Search Bar */}
-                        {(showHistory && chatHistory.length > 0) && (
-                            <div className="relative mb-4">
-                                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search conversations..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className={`w-full pl-10 pr-4 py-2 rounded-lg border ${
-                                        theme === 'dark'
-                                            ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400'
-                                            : 'bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500'
-                                    } focus:outline-none focus:border-purple-500`}
-                                />
-                                {searchTerm && (
-                                    <button
-                                        onClick={() => setSearchTerm('')}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        {showLiked ? (
-                            likedMessagesWithContent.length === 0 ? (
-                                <div className={`text-center py-8 ${textSecondary}`}>
-                                    <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">No liked responses yet</p>
-                                    <p className="text-xs mt-1">Click the like button on any AI response to save it here</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {likedMessagesWithContent.map((message) => (
-                                        <div
-                                            key={message.id}
-                                            className={`p-3 rounded-xl transition-all border ${
-                                                theme === 'dark'
-                                                    ? 'bg-gray-700/30 border-gray-600/30'
-                                                    : 'bg-white/60 border-gray-200/60'
-                                            }`}
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -2417,7 +2199,7 @@ export default function AiChatTab() {
                                         <div className={`text-center py-8 ${textSecondary}`}>
                                             <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
                                             <p className="text-sm">No liked responses yet</p>
-                                            <p className="text-xs mt-1">Click the like button on any AI response to save it here</p>
+                                            <p className="text-xs mt-1">Like AI responses to save them here</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
@@ -2446,7 +2228,7 @@ export default function AiChatTab() {
                                                                 <span className="text-xs text-yellow-500">Liked</span>
                                                             </div>
                                                         </div>
-                                                        {message.sessionPreview && (
+                                                        {message.sessionPreview && message.sessionPreview !== "Current conversation" && (
                                                             <p className={`text-xs ${textSecondary} mt-1`}>
                                                                 From: {message.sessionPreview}
                                                             </p>
@@ -2472,7 +2254,6 @@ export default function AiChatTab() {
                     </div>
                 )}
 
-<<<<<<< HEAD
                 {/* Mobile Content */}
                 <div className="lg:hidden flex-1 w-full">
                     <MobileChatInterface />
@@ -2493,30 +2274,11 @@ export default function AiChatTab() {
                                     CineCoolAI Assistant
                                 </h3>
                                 <p className={`${textSecondary} mb-8 text-lg max-w-2xl mx-auto`}>
-=======
-                {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col min-w-0">
-                    {/* Chat Window */}
-                    <div className={`flex-1 overflow-y-auto space-y-4 sm:space-y-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl ${chatWindowBg}`}>
-                        {chat.length === 0 && (
-                            <div className="text-center py-8 sm:py-12">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                                    <Film className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                                </div>
-                                <h3 className={`text-lg sm:text-xl font-semibold ${titleColor} mb-2`}>
-                                    CineCoolAI Assistant 🎬
-                                </h3>
-                                <p className={`${textSecondary} mb-2 max-w-md mx-auto text-sm`}>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     Your AI-powered film and television analyst. I specialize in deep character analysis, show comparisons, and storytelling insights.
                                 </p>
 
                                 {connectionStatus === 'error' && (
-<<<<<<< HEAD
                                     <div className={`${theme === 'dark' ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} border rounded-xl p-4 max-w-md mx-auto mb-6`}>
-=======
-                                    <div className={`${theme === 'dark' ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} border rounded-xl p-3 sm:p-4 max-w-md mx-auto mb-4`}>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                         <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'} mb-2`}>
                                             <RefreshCw className="w-4 h-4" />
                                             <span className="text-sm font-semibold">Backend Connection Required</span>
@@ -2527,29 +2289,16 @@ export default function AiChatTab() {
                                     </div>
                                 )}
 
-<<<<<<< HEAD
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mb-8">
-=======
-                                {/* Quick Suggestions */}
-                                <div className="grid grid-cols-1 gap-2 sm:gap-3 max-w-2xl mx-auto mb-6">
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     {suggestions.map((suggestion, index) => (
                                         <button
                                             key={index}
                                             onClick={() => setQuestion(suggestion)}
-<<<<<<< HEAD
                                             className={`p-4 text-left ${suggestionBg} transition-all hover:border-purple-500/30 group rounded-xl`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <Sparkles className={`w-5 h-5 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} group-hover:scale-110 transition-transform`} />
                                                 <span className={`text-sm font-medium ${suggestionText} ${theme === 'dark' ? 'group-hover:text-white' : 'group-hover:text-gray-900'}`}>
-=======
-                                            className={`p-2 sm:p-3 text-left ${suggestionBg} transition-all hover:border-purple-500/30 group ${theme === 'light' ? 'hover:shadow-md' : ''}`}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className={`w-3 h-3 sm:w-4 sm:h-4 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} group-hover:scale-110 transition-transform`} />
-                                                <span className={`text-xs sm:text-sm ${suggestionText} ${theme === 'dark' ? 'group-hover:text-white' : 'group-hover:text-gray-900'}`}>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                                     {suggestion}
                                                 </span>
                                             </div>
@@ -2557,17 +2306,10 @@ export default function AiChatTab() {
                                     ))}
                                 </div>
 
-<<<<<<< HEAD
                                 <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-xl p-6 max-w-md mx-auto`}>
                                     <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-2 justify-center`}>
                                         <Zap className="w-5 h-5" />
                                         <span className="text-lg font-semibold">Powered by AI + TMDB</span>
-=======
-                                <div className={`${theme === 'dark' ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} border rounded-xl p-3 sm:p-4 max-w-md mx-auto`}>
-                                    <div className={`flex items-center gap-2 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-2`}>
-                                        <Zap className="w-4 h-4" />
-                                        <span className="text-sm font-semibold">Powered by AI + TMDB</span>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                     </div>
                                     <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
                                         Real-time movie data • AI-powered analysis • Character insights • Show recommendations
@@ -2580,7 +2322,6 @@ export default function AiChatTab() {
                             ))
                         )}
 
-<<<<<<< HEAD
                         {loading && (
                             <div className="flex gap-4 p-6 items-start">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -2588,165 +2329,6 @@ export default function AiChatTab() {
                                 </div>
                                 <div className={`${loadingBg} rounded-2xl rounded-bl-none p-4 flex-1 shadow-lg`}>
                                     <div className="flex items-center gap-3">
-=======
-                        {chat.map((msg, i) => (
-                            <div
-                                key={i}
-                                className={`flex gap-2 sm:gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
-                            >
-                                {/* Avatar */}
-                                <div className={`flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
-                                    msg.sender === "user"
-                                        ? "bg-blue-500"
-                                        : "bg-gradient-to-r from-purple-500 to-blue-500"
-                                }`}>
-                                    {msg.sender === "user" ? (
-                                        <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                                    ) : (
-                                        <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                                    )}
-                                </div>
-
-                                {/* Message */}
-                                <div className={`flex-1 max-w-[85%] ${msg.sender === "user" ? "text-right" : "text-left"}`}>
-                                    <div className={`inline-block p-3 sm:p-4 rounded-xl sm:rounded-2xl ${
-                                        msg.sender === "user"
-                                            ? `${messageUserBg} rounded-br-none`
-                                            : `${messageAIBg} rounded-bl-none ${theme === 'light' ? 'shadow-sm' : ''}`
-                                    }`}>
-                                        {msg.sender === "user" ? (
-                                            <div className="space-y-2">
-                                                {editingMessageId === msg.id ? (
-                                                    <div className="space-y-2">
-                                                        <textarea
-                                                            value={editText}
-                                                            onChange={(e) => setEditText(e.target.value)}
-                                                            className={`w-full p-2 rounded border text-sm ${
-                                                                theme === 'dark'
-                                                                    ? 'bg-gray-600 border-gray-500 text-white'
-                                                                    : 'bg-white border-gray-300 text-gray-900'
-                                                            }`}
-                                                            rows="3"
-                                                        />
-                                                        <div className="flex gap-2 justify-end">
-                                                            <button
-                                                                onClick={saveEdit}
-                                                                className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded text-xs"
-                                                            >
-                                                                <Save className="w-3 h-3" />
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                onClick={cancelEdit}
-                                                                className="flex items-center gap-1 px-2 py-1 bg-gray-500 text-white rounded text-xs"
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="text-white text-sm sm:text-base">{msg.text}</div>
-                                                        <div className="flex gap-1 justify-end">
-                                                            <button
-                                                                onClick={() => startEditing(msg.id, msg.text)}
-                                                                className="p-1 hover:bg-blue-400/30 rounded transition-colors"
-                                                                title="Edit message"
-                                                            >
-                                                                <Edit className="w-3 h-3 text-white" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => copyToClipboard(msg.text, msg.id)}
-                                                                className="p-1 hover:bg-blue-400/30 rounded transition-colors"
-                                                                title="Copy message"
-                                                            >
-                                                                <Copy className="w-3 h-3 text-white" />
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2 sm:space-y-3">
-                                                <div className="text-sm sm:text-base">
-                                                    {renderText(msg.text)}
-                                                </div>
-
-                                                {/* Action Buttons for AI Messages */}
-                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-2 sm:mt-3 pt-2 border-t border-gray-300/30">
-                                                    <div className="flex gap-1">
-                                                        <button
-                                                            onClick={() => regenerateResponse(msg.id)}
-                                                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
-                                                                theme === 'dark'
-                                                                    ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300'
-                                                                    : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
-                                                            }`}
-                                                            title="Regenerate response"
-                                                            disabled={loading}
-                                                        >
-                                                            <RefreshCw className="w-3 h-3" />
-                                                            Regenerate
-                                                        </button>
-                                                        <button
-                                                            onClick={() => toggleLike(msg.id)}
-                                                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
-                                                                messageLikes[msg.id]
-                                                                    ? 'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
-                                                                    : theme === 'dark'
-                                                                        ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300'
-                                                                        : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600'
-                                                            }`}
-                                                            title={messageLikes[msg.id] ? "Unlike response" : "Like response"}
-                                                        >
-                                                            <ThumbsUp className={`w-3 h-3 ${messageLikes[msg.id] ? 'fill-current' : ''}`} />
-                                                            {messageLikes[msg.id] ? 'Liked' : 'Like'}
-                                                        </button>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => copyToClipboard(msg.text, msg.id)}
-                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all ${
-                                                            theme === 'dark'
-                                                                ? 'bg-gray-600/50 hover:bg-gray-600 text-gray-300 hover:text-white'
-                                                                : 'bg-gray-200/70 hover:bg-gray-300 text-gray-600 hover:text-gray-800'
-                                                        } ${copiedMessageId === msg.id ? 'bg-green-500/20 text-green-600' : ''}`}
-                                                        title="Copy response"
-                                                    >
-                                                        {copiedMessageId === msg.id ? (
-                                                            <>
-                                                                <Check className="w-3 h-3" />
-                                                                Copied!
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Copy className="w-3 h-3" />
-                                                                Copy
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className={`text-xs ${textSecondary} mt-1 ${msg.sender === "user" ? "text-right" : "text-left"}`}>
-                                        {formatTimestamp(msg.timestamp)}
-                                        {streamingMessageId === msg.id && (
-                                            <span className="ml-2 animate-pulse">• Typing...</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-
-                        {loading && (
-                            <div className="flex gap-3">
-                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                                </div>
-                                <div className={`${loadingBg} rounded-xl sm:rounded-2xl rounded-bl-none p-3 sm:p-4 ${theme === 'light' ? 'shadow-sm' : ''}`}>
-                                    <div className="flex items-center gap-2">
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                         <span className="text-sm font-medium">CineCoolAI is thinking<span className="animate-pulse">...</span></span>
                                     </div>
@@ -2756,179 +2338,14 @@ export default function AiChatTab() {
                         <div ref={chatEndRef} />
                     </div>
 
-<<<<<<< HEAD
                     {/* Desktop Input Area */}
                     <DesktopInputArea />
                 </div>
-
-                {/* Desktop Pro Tips Sidebar */}
-=======
-                    {/* Input Area */}
-                    <div className={`mt-3 sm:mt-4 p-3 sm:p-4 ${inputAreaBg} rounded-xl sm:rounded-2xl ${theme === 'light' ? 'shadow-md' : ''}`}>
-                        <div className="flex gap-2 sm:gap-3">
-                            <div className="flex-1 relative">
-                                <textarea
-                                    rows="1"
-                                    className={`w-full ${theme === 'dark' ? 'bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400' : 'bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500'} border rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 pr-20 sm:pr-24 resize-none focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all text-sm sm:text-base`}
-                                    placeholder="Ask about character analysis, show comparisons..."
-                                    value={question}
-                                    onChange={(e) => setQuestion(e.target.value)}
-                                    onKeyDown={handleKey}
-                                    style={{ minHeight: '44px', maxHeight: '100px' }}
-                                />
-                                {/* Voice Input Button */}
-                                <button
-                                    onClick={toggleVoiceInput}
-                                    className={`absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 rounded transition-all ${
-                                        isListening
-                                            ? 'bg-red-500 text-white animate-pulse'
-                                            : theme === 'dark'
-                                                ? 'bg-gray-600/50 text-gray-300 hover:bg-gray-600'
-                                                : 'bg-gray-200/70 text-gray-600 hover:bg-gray-300'
-                                    }`}
-                                    title={isListening ? "Stop listening" : "Start voice input"}
-                                >
-                                    {isListening ? <MicOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                </button>
-                            </div>
-                            <button
-                                onClick={() => sendMessage()}
-                                disabled={loading || !question.trim()}
-                                className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-lg sm:rounded-xl font-semibold transition-all duration-200 flex items-center gap-1 sm:gap-2 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-                            >
-                                {loading ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Send className="w-4 h-4" />
-                                )}
-                                <span className="hidden sm:inline">Send</span>
-                            </button>
-                        </div>
-                        <div className="flex justify-between items-center mt-2 px-1">
-                            <span className={`text-xs ${textSecondary}`}>
-                                Press Enter to send
-                                {isListening && <span className="ml-2 text-red-500">• Listening...</span>}
-                            </span>
-                            <span className={`text-xs ${
-                                connectionStatus === 'connected'
-                                    ? theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                                    : connectionStatus === 'error'
-                                        ? theme === 'dark' ? 'text-red-400' : 'text-red-600'
-                                        : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
-                            }`}>
-                                {connectionStatus === 'connected' ? 'Connected' :
-                                    connectionStatus === 'error' ? 'Local Mode' : 'Checking'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Pro Tips Sidebar - Desktop */}
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-                <div className="w-80 hidden lg:block">
-                    <div className={`${sidebarBg} rounded-2xl p-6 sticky top-6 ${theme === 'light' ? 'shadow-lg' : ''}`}>
-                        <div className="flex items-center gap-2 mb-4">
-                            <Zap className={`w-5 h-5 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
-                            <h3 className={`font-semibold ${titleColor}`}>Pro Tips</h3>
-                        </div>
-
-                        <div className="space-y-4">
-<<<<<<< HEAD
-                            {proTips.map((tip, index) => (
-                                <div key={index} className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors`}>
-                                    <div className="flex items-start gap-3">
-                                        <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
-                                            {tip.icon}
-                                        </div>
-                                        <div>
-                                            <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
-                                                {tip.title}
-                                            </h4>
-                                            <p className={`text-xs ${textSecondary}`}>
-                                                {tip.description}
-                                            </p>
-                                        </div>
-=======
-                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
-                                <div className="flex items-start gap-3">
-                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
-                                        <Search className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
-                                            Be Specific
-                                        </h4>
-                                        <p className={`text-xs ${textSecondary}`}>
-                                            Mention character names, specific seasons, or particular aspects
-                                        </p>
->>>>>>> 1649307ac30f5dc90b0891e3aee2911e0075ddbe
-                                    </div>
-                                </div>
-                            </div>
-                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
-                                <div className="flex items-start gap-3">
-                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
-                                        <TrendingUp className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
-                                            Compare & Contrast
-                                        </h4>
-                                        <p className={`text-xs ${textSecondary}`}>
-                                            Ask to compare characters, shows, or genres for deeper insights
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className={`${theme === 'dark' ? 'bg-gray-700/30 border-gray-600/30' : 'bg-white/60 border-gray-200/60'} rounded-xl p-4 border hover:border-purple-500/30 transition-colors ${theme === 'light' ? 'shadow-sm' : ''}`}>
-                                <div className="flex items-start gap-3">
-                                    <div className={`p-2 ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex-shrink-0`}>
-                                        <Heart className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h4 className={`font-semibold ${titleColor} text-sm mb-1`}>
-                                            Character Focus
-                                        </h4>
-                                        <p className={`text-xs ${textSecondary}`}>
-                                            I specialize in character psychology and development arcs
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-300/50'}`}>
-                            <h4 className={`font-semibold ${titleColor} text-sm mb-3`}>Quick Examples</h4>
-                            <div className="space-y-2">
-                                <button
-                                    onClick={() => setQuestion("Should I watch Breaking Bad?")}
-                                    className={`w-full text-left p-2 text-xs ${textSecondary} ${theme === 'dark' ? 'hover:text-white hover:bg-gray-700/30' : 'hover:text-gray-900 hover:bg-gray-100'} rounded-lg transition-colors`}
-                                >
-                                    "Should I watch Breaking Bad?"
-                                </button>
-                                <button
-                                    onClick={() => setQuestion("Compare Patrick Jane and Adrian Monk")}
-                                    className={`w-full text-left p-2 text-xs ${textSecondary} ${theme === 'dark' ? 'hover:text-white hover:bg-gray-700/30' : 'hover:text-gray-900 hover:bg-gray-100'} rounded-lg transition-colors`}
-                                >
-                                    "Compare Patrick Jane and Adrian Monk"
-                                </button>
-                                <button
-                                    onClick={() => setQuestion("Analyze Walter White's character")}
-                                    className={`w-full text-left p-2 text-xs ${textSecondary} ${theme === 'dark' ? 'hover:text-white hover:bg-gray-700/30' : 'hover:text-gray-900 hover:bg-gray-100'} rounded-lg transition-colors`}
-                                >
-                                    "Analyze Walter White's character"
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
 
             {/* Mobile Input Area */}
             <MobileInputArea />
-            
-            {/* Mobile Hamburger Menu */}
-            <MobileSidebarMenu />
             
             {/* Mobile Sidebar Views */}
             <MobileSidebarView />

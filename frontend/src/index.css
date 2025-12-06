@@ -1,9 +1,9 @@
-/* src/index.css */
+/* src/index.css - NO GAP VERSION with better bright mode */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Netflix-style Theme Variables */
+/* Netflix-style Theme Variables - UPDATED */
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f8f8;
@@ -13,14 +13,254 @@
   --accent-color: #e50914;
 }
 
-button,
-a {
+/* Updated theme variables from your request */
+:root[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --text-primary: #000000;
+  --border-color: #e5e5e5;
+}
+
+:root[data-theme="dark"] {
+  --bg-primary: #0f0f0f;
+  --text-primary: #ffffff;
+  --border-color: #333;
+}
+
+/* Base */
+body {
+  margin: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.25s ease;
+}
+
+
+/* Spacer should match exactly navbar height */
+.navbar-spacer {
+  height: var(--navbar-height, 72px) !important;
+  width: 100%;
+  display: block;
+  flex-shrink: 0;
+  margin: 0 !important;
+}
+
+
+/* BANNER WRAPPER - NO PADDING, DIRECT ATTACHMENT */
+.banner-wrapper {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  height: auto !important;
+  min-height: 60vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Force banner to start exactly under navbar */
+.banner-wrapper,
+.banner-container,
+.hero-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Ensure banner starts IMMEDIATELY after navbar */
+.banner-container,
+.banner-content,
+.hero-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Remove all extra spacing globally */
+.content-wrapper,
+.main-content,
+.page-content,
+.app-container,
+#root > div {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.movies-section,
+.series-section,
+.anime-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* --------------------------------------- */
+/* 2) LOGO IMPROVEMENTS                    */
+/* --------------------------------------- */
+
+/* Logo enhancement for bright mode */
+nav img[alt="CineCoolTV"] {
+  transition: filter 0.3s ease, transform 0.25s ease;
+}
+
+nav img[alt="CineCoolTV"]:hover {
+  transform: scale(1.05);
+}
+
+/* Bright mode logo enhancements - UPDATED */
+[data-theme="light"] nav img[alt="CineCoolTV"] {
+  filter: 
+    brightness(1.18) 
+    contrast(1.12) 
+    saturate(1.12)
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+/* Dark mode logo enhancements - UPDATED */
+[data-theme="dark"] nav img[alt="CineCoolTV"] {
+  filter: 
+    brightness(1.28)
+    contrast(1.14)
+    drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+}
+
+/* Navbar background adjustments for bright mode */
+[data-theme="light"] nav[role="navigation"] {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Responsive logo scaling */
+@media (max-width: 640px) {
+  :root { 
+    --logo-size: 62px; 
+  }
+  
+  nav[role="navigation"] {
+    min-height: 60px !important; /* Slightly smaller on mobile */
+  }
+  
+  .navbar-spacer {
+    height: var(--navbar-height, 60px);
+  }
+  
+  .banner-wrapper {
+    min-height: 55vh !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Bigger logo on mobile */
+  nav img[alt="CineCoolTV"] {
+    height: 68px !important;
+  }
+}
+
+/* Desktop larger screens */
+@media (min-width: 641px) {
+  :root { 
+    --logo-size: 82px; 
+  }
+}
+
+@media (min-width: 1024px) {
+  :root { 
+    --logo-size: 90px; 
+  }
+  
+  nav[role="navigation"] {
+    min-height: 68px !important;
+  }
+  
+  .navbar-spacer {
+    height: var(--navbar-height, 68px);
+  }
+  
+  /* Even bigger logo on desktop */
+  nav img[alt="CineCoolTV"] {
+    height: 88px !important;
+  }
+}
+
+/* --------------------------------------- */
+/* 3) SCROLLBAR CLEANUP (optional)         */
+/* --------------------------------------- */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+/* Scrollbar styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Apply tappable size ONLY to normal UI buttons */
+button:not(.dot),
+a:not(.dot) {
   min-height: 44px;
   min-width: 44px;
 }
 
+/* Exceptions: allow very small indicator dots and other intentionally small buttons */
+.dot,
+.banner-indicators button,
+button[data-small] {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+/* --- FIX: ADDED Separator Class --- */
+.container-separator {
+    width: 100%;
+    height: 1px;
+    margin: 2rem 0;
+    background: var(--border-color);
+}
+/* ---------------------------------- */
+
 html, body {
   overflow-x: hidden;
+}
+
+/* For very large hero visuals */
+@media (min-width: 1280px) {
+  .banner-wrapper {
+    min-height: 72vh;
+  }
+}
+
+/* Remove any extra gap from body */
+body {
+  padding-top: 0 !important;
+  margin: 0 !important;
+}
+
+/* Fallback for old theme variables */
+:root[data-theme="dark"] {
+  --bg-secondary: #1a1a1a;
+  --text-secondary: #e5e5e5;
+  --accent-color: #e50914;
+}
+
+:root[data-theme="light"] {
+  --bg-secondary: #f8f8f8;
+  --text-secondary: #333333;
+  --accent-color: #e50914;
 }
 
 @media (max-width: 640px) {
@@ -28,25 +268,8 @@ html, body {
     font-size: 14px;
   }
 }
-:root[data-theme="dark"] {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --text-primary: #ffffff;
-  --text-secondary: #e5e5e5;
-  --border-color: #333333;
-  --accent-color: #e50914;
-}
 
-:root[data-theme="light"] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f8f8;
-  --text-primary: #000000;
-  --text-secondary: #333333;
-  --border-color: #e0e0e0;
-  --accent-color: #e50914;
-}
-
-/* Safe area support for modern phones */
+/* Safe area support */
 .safe-area-bottom {
   padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
 }
@@ -165,25 +388,6 @@ html {
   transition: none !important;
 }
 
-/* Scrollbar styling */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
 /* Focus states for accessibility */
 button:focus-visible,
 input:focus-visible,
@@ -218,6 +422,36 @@ select:focus-visible {
   animation: fade-in 0.3s ease-out;
 }
 
+/* Slide up animation for mobile sheet */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Fade-in-up animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out;
+}
+
 /* Performance optimizations */
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -227,96 +461,307 @@ select:focus-visible {
   }
 }
 
-/* MOBILE UI */
-
+/* MOBILE UI - NAV ONLY */
 @media (max-width: 768px) {
-
-  /* ---- Banner ---- */
-  header {
-    height: 55vh !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-
-  header h1 {
-    font-size: 1.6rem !important;
-    line-height: 1.9rem !important;
-  }
-
-  header p {
-    font-size: 0.85rem !important;
-    line-height: 1.2rem !important;
-    max-width: 92%;
-  }
-
-  /* Buttons inside banner */
-  header button {
-    padding: 0.45rem 1rem !important;
-    font-size: 0.9rem !important;
-  }
-
-  /* Rating badge */
-  header span {
-    font-size: 0.75rem !important;
-    padding: 0.25rem 0.5rem !important;
-  }
-
-  /* Slide Indicators */
-  header .absolute.bottom-6.right-10 {
-    bottom: 10px !important;
-    right: 20px !important;
-    gap: 6px !important;
-  }
-
-  header .absolute.bottom-6.right-10 button {
-    width: 8px !important;
-    height: 8px !important;
-    transform: scale(0.9) !important;
-  }
-
-  /* ---- Navbar ---- */
-
   nav {
     padding: 0 !important;
   }
-
   nav > div {
     padding-left: 0.8rem !important;
     padding-right: 0.8rem !important;
   }
-
-  /* Logo text smaller */
-  nav h1 {
-    font-size: 1.4rem !important;
+  
+  /* Banner wrapper for mobile */
+  .banner-wrapper {
+    padding-top: 0 !important;
+    min-height: 60vh !important;
   }
 
-  /* Tabs row becomes scrollable */
-  nav .flex.space-x-6 {
-    overflow-x: auto;
-    white-space: nowrap;
-    gap: 10px;
-    padding-bottom: 5px;
-    scrollbar-width: none;
+  /* Fix dot indicators positioning */
+  .banner-indicators {
+    position: absolute !important;
+    bottom: 1.5rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 40 !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(8px) !important;
+    border-radius: 9999px !important;
+    padding: 0.5rem 0.75rem !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+    pointer-events: auto !important;
   }
 
-  nav .flex.space-x-6::-webkit-scrollbar {
-    display: none;
+  /* Small circle dot sizes */
+  .banner-indicators button {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    transition: all 0.3s !important;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
   }
 
-  /* Tabs shrink */
-  nav button {
-    padding: 0.35rem 0.75rem !important;
-    font-size: 0.85rem !important;
+  .banner-indicators button.active {
+    width: 10px !important;
+    height: 10px !important;
+    background: white !important;
   }
 
-  /* Icons shrink */
-  nav svg {
-    width: 18px !important;
-    height: 18px !important;
+  .banner-indicators button.inactive {
+    background: rgba(255, 255, 255, 0.4) !important;
   }
 
-  /* Profile + Theme buttons */
-  nav .flex.items-center.gap-3 button {
-    padding: 0.35rem !important;
+  .banner-indicators button.inactive:hover {
+    background: rgba(255, 255, 255, 0.7) !important;
   }
+}
+
+/* DESKTOP: Show right-side vertical dots */
+@media (min-width: 769px) {
+  .banner-indicators {
+    position: absolute !important;
+    top: 50% !important;
+    right: 1.5rem !important;
+    transform: translateY(-50%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .banner-indicators button {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 999px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .banner-wrapper {
+    height: 70vh !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    border-radius: 0 !important;
+  }
+
+  .banner-wrapper img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .banner-wrapper .container {
+    padding-top: 4rem !important;
+  }
+}
+
+@keyframes banner-shimmer {
+  0% { background-position: -300% 0; }
+  100% { background-position: 300% 0; }
+}
+
+.shimmer-banner-large {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  opacity: 0.32;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.02) 0%,
+    rgba(255,255,255,0.06) 30%,
+    rgba(255,255,255,0.02) 60%,
+    rgba(255,255,255,0.00) 100%
+  );
+  backdrop-filter: blur(4px);
+  background-size: 600% 100%;
+  animation: banner-shimmer 2.6s linear infinite;
+}
+
+/* Slight variation when you want a bright shimmer */
+.shimmer-banner-large--bright {
+  opacity: 0.45;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+/* Improve pointer and safe-area rules */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0.5rem);
+}
+
+/* AiChat improvements */
+.ai-chat-container {
+  --ai-bg: rgba(14, 18, 24, 0.6);
+  --ai-border: rgba(255,255,255,0.04);
+}
+
+/* Larger bot avatar in desktop view */
+.ai-bot-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+
+/* Message bubble refinements */
+.msg-bubble {
+  border-radius: 16px;
+  padding: 18px;
+  line-height: 1.45;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+}
+
+.msg-bubble.ai {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.msg-bubble.user {
+  background: linear-gradient(90deg, #6d5bff, #ff6fb5);
+  color: white;
+}
+
+/* small rounded icon buttons inside bubbles */
+.inline-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* make left sidebar sticky and visually separated */
+.ai-sidebar {
+  position: sticky;
+  top: 84px;
+}
+
+/* subtle divider for chat column */
+.chat-column {
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  border-left: 1px solid rgba(255,255,255,0.02);
+}
+
+/* responsive tweaks */
+@media (max-width: 1024px) {
+  .ai-bot-avatar { width: 48px; height: 48px; }
+  .msg-bubble { padding: 14px; }
+}
+
+/* cinematic large banner shimmer */
+@keyframes banner-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-banner-large {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.00) 0%,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.06) 50%,
+    rgba(255,255,255,0.03) 75%,
+    rgba(255,255,255,0.00) 100%);
+  background-size: 400% 100%;
+  opacity: 0.28;
+  filter: saturate(0.98) blur(0.6px);
+  animation: banner-shimmer 2.8s linear infinite;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+}
+
+/* Slightly brighter variant */
+.shimmer-banner-large--bright { opacity: 0.42; }
+
+/* small spacer under banner */
+.banner-spacer {
+  pointer-events: none;
+}
+
+/* AiChat: ensure base sizes */
+.ai-chat-container { font-size: 16px; }
+.msg-bubble { border-radius: 16px; padding: 16px; line-height: 1.45; }
+.msg-bubble.ai { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.03); }
+.msg-bubble.user { background: linear-gradient(90deg, #6d5bff, #ff6fb5); color: white; }
+
+/* ensure carousel 'dot' indicators stay small */
+.dot { display:inline-flex; align-items:center; justify-content:center; }
+
+/* Hide scrollbar for tabs container */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Better mobile responsiveness */
+@media (max-width: 640px) {
+  .tabs-container {
+    scroll-snap-type: x mandatory;
+  }
+  
+  .tabs-container button {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+}
+
+/* Logo spacing */
+header nav a img {
+  display: block;
+}
+
+/* Ensure clickable area is large on mobile */
+header nav a {
+  padding: 6px;
+  border-radius: 8px;
+}
+
+/* Keep the logo visually crisp on dark backgrounds */
+.site-logo {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Small responsive tweaks */
+@media (max-width: 640px) {
+  header nav img { height: 40px; }
+  header nav span { display: none; }
+}
+
+@media (min-width: 641px) {
+  header nav img { height: 44px; }
+  header nav span { display: inline-block; }
+}
+
+
+/* Remove any possible margin from main container */
+main {
+  margin-top: 0 !important;
+}
+
+/* Force banner to start right at the bottom of navbar */
+.banner-wrapper > div:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Remove any flex spacing that might create gaps */
+.flex-col > .banner-wrapper:first-child {
+  margin-top: 0 !important;
+}
+.page-fix {
+  padding-top: var(--navbar-height) !important;
 }

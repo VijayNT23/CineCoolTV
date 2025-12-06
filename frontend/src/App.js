@@ -26,7 +26,7 @@ const AppContent = () => {
         <ErrorBoundary>
             <div className="min-h-screen themed-bg-primary">
                 <Navbar />
-                <div className="pt-16">
+                <div className="navbar-spacer">
                     <Routes>
                         <Route path="/" element={<MoviesTab />} />
                         <Route path="/movies" element={<MoviesTab />} />

@@ -1,26 +1,43 @@
-// src/components/Toast.js
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const Toast = ({ message, type = "info", onClose }) => {
-    useEffect(() => {
-        const timer = setTimeout(onClose, 2500); // auto close after 2.5s
-        return () => clearTimeout(timer);
-    }, [onClose]);
+/**
+ * Global toast listener.
+ * Dispatch an event anywhere in the app like:
+ * window.dispatchEvent(new CustomEvent('appToast', { detail: { message: 'Saved!', type: 'success' } }))
+ */
+export default function Toast() {
+  const [toasts, setToasts] = useState([]);
 
-    const color =
-        type === "success"
-            ? "bg-green-600"
-            : type === "error"
-                ? "bg-red-600"
-                : "bg-gray-800";
+  useEffect(() => {
+    const handler = (e) => {
+      const { message = "", type = "info", duration = 3000 } = e.detail || {};
+      const id = Date.now() + Math.random();
+      setToasts((t) => [...t, { id, message, type }]);
+      setTimeout(() => {
+        setToasts((t) => t.filter(x => x.id !== id));
+      }, duration);
+    };
 
-    return (
+    window.addEventListener("appToast", handler);
+    return () => window.removeEventListener("appToast", handler);
+  }, []);
+
+  if (!toasts.length) return null;
+
+  return (
+    <div className="fixed z-60 right-4 bottom-6 flex flex-col gap-3 pointer-events-none">
+      {toasts.map(t => (
         <div
-            className={`${color} text-white px-4 py-2 rounded-lg shadow-lg fixed bottom-6 right-6 z-50 animate-fade-in`}
+          key={t.id}
+          className={`pointer-events-auto max-w-sm w-full rounded-lg px-4 py-3 shadow-lg transform transition-all ${
+            t.type === "success" ? "bg-green-500 text-white" :
+            t.type === "error" ? "bg-red-500 text-white" :
+            "bg-gray-900 text-white"
+          }`}
         >
-            {message}
+          <div className="text-sm font-medium">{t.message}</div>
         </div>
-    );
-};
-
-export default Toast;
+      ))}
+    </div>
+  );
+}

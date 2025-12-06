@@ -861,22 +861,47 @@ const ProfileTab = () => {
                                 </div>
                             )}
 
-                            {/* Auth Buttons */}
-                            <div className="mt-3 flex gap-2">
+                            {/* Auth Section - Centered & Prominent */}
+                            <div className="mt-6">
                                 {currentUser ? (
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg bg-gradient-to-r from-red-600 to-pink-600 text-white hover:from-red-500 hover:to-pink-500"
-                                    >
-                                        <LogOut size={14} /> LOGOUT
-                                    </button>
+                                    <div className="text-center">
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-xl bg-gradient-to-r from-red-600 to-pink-600 text-white hover:from-red-500 hover:to-pink-500 hover:scale-105 mx-auto"
+                                        >
+                                            <LogOut size={16} /> LOGOUT ACCOUNT
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <button
-                                        onClick={() => setAuthMode("signup")}
-                                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500"
-                                    >
-                                        SIGN UP TO SAVE
-                                    </button>
+                                    <div className={`text-center p-4 rounded-xl backdrop-blur-sm border ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-500/10 border-blue-500/20'}`}>
+                                        <h4 className={`text-sm font-bold mb-2 ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                                            🔐 SAVE YOUR PROGRESS
+                                        </h4>
+                                        <p className={`text-xs mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                            Sign up to save your library, stats, and preferences across all devices
+                                        </p>
+                                        
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => setAuthMode("signup")}
+                                                className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-105"
+                                            >
+                                                🚀 SIGN UP FOR FREE
+                                            </button>
+                                            
+                                            <div className="flex items-center gap-2 justify-center mt-2">
+                                                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                    Already have an account?
+                                                </span>
+                                                <button
+                                                    onClick={() => setAuthMode("login")}
+                                                    className={`text-xs font-bold hover:underline ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
+                                                >
+                                                    Log In
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -958,10 +983,11 @@ const GuestStats = ({ setAuthMode, handleGoogleAuth, isDark }) => {
                         <div className={`flex-1 h-px ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Center these buttons */}
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
                         <button
                             onClick={() => setAuthMode("login")}
-                            className={`px-3 py-2 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border ${
+                            className={`px-4 py-2.5 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border flex-1 max-w-xs mx-auto ${
                                 isDark
                                     ? "bg-blue-600/20 text-blue-400 border-blue-500/30 hover:bg-blue-600/30"
                                     : "bg-blue-500/20 text-blue-600 border-blue-500/30 hover:bg-blue-500/30"
@@ -971,7 +997,7 @@ const GuestStats = ({ setAuthMode, handleGoogleAuth, isDark }) => {
                         </button>
                         <button
                             onClick={() => setAuthMode("signup")}
-                            className={`px-3 py-2 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border ${
+                            className={`px-4 py-2.5 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border flex-1 max-w-xs mx-auto ${
                                 isDark
                                     ? "bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/30"
                                     : "bg-green-500/20 text-green-600 border-green-500/30 hover:bg-green-500/30"
