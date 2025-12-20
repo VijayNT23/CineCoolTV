@@ -1,78 +1,177 @@
-// src/context/AuthContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-    onAuthStateChanged,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signOut,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "../firebase";
+import axios from "axios";
 
-const AuthContext = createContext();
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext(null);
+
+// ✅ Backend base URL
+const API_BASE = "http://localhost:8080";
 
 export const AuthProvider = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null); // Changed from [user, setUser]
+    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Watch auth state
+    // 🔁 Restore login on refresh with JWT decoding
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-            setLoading(false);
-        });
-        return unsubscribe;
+        const storedToken = localStorage.getItem("token");
+
+        if (storedToken) {
+            try {
+                // ✅ Decode JWT token to get user info
+                const payload = JSON.parse(atob(storedToken.split(".")[1]));
+
+                setToken(storedToken);
+                setCurrentUser({
+                    id: payload.sub || payload.userId,
+                    email: payload.email,
+                    name: payload.name || payload.email?.split("@")[0] || "User"
+                });
+
+                // ✅ Also restore userProfile from localStorage if available
+                const storedProfile = localStorage.getItem("userProfile");
+                if (!storedProfile) {
+                    localStorage.setItem("userProfile", JSON.stringify({
+                        name: payload.name || payload.email?.split("@")[0] || "User",
+                        email: payload.email,
+                        avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+                        joined: new Date().toLocaleDateString()
+                    }));
+                }
+
+                // ✅ CRITICAL: Force stats re-calculation when user is restored from token
+                setTimeout(() => {
+                    window.dispatchEvent(new Event("libraryUpdated"));
+                }, 100);
+
+            } catch (err) {
+                console.error("Error decoding token:", err);
+                // Clear invalid token
+                localStorage.removeItem("token");
+                localStorage.removeItem("userProfile");
+            }
+        }
+
+        setLoading(false);
     }, []);
 
-    // Google login
-    const loginWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
+    // ✅ LOGIN (Backend JWT)
+    const login = async (email, password) => {
         try {
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Google Sign-In Error:", error);
-            alert("Google Sign-in failed. Try again.");
+            const res = await axios.post(
+                `${API_BASE}/auth/login`,
+                { email, password },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const jwt = res.data.token || res.data;
+
+            if (!jwt) {
+                throw new Error("No token received");
+            }
+
+            // ✅ Decode token to get user info
+            const payload = JSON.parse(atob(jwt.split(".")[1]));
+
+            // ✅ Persist token and user data
+            localStorage.setItem("token", jwt);
+
+            const userData = {
+                id: payload.sub || payload.userId,
+                email: payload.email,
+                name: payload.name || email.split("@")[0]
+            };
+
+            // ✅ Store user profile in localStorage
+            localStorage.setItem("userProfile", JSON.stringify({
+                name: userData.name,
+                email: userData.email,
+                avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+                joined: new Date().toLocaleDateString()
+            }));
+
+            // ✅ Update state
+            setToken(jwt);
+            setCurrentUser(userData);
+
+            // ✅ CRITICAL: Force stats re-calculation after successful login
+            setTimeout(() => {
+                window.dispatchEvent(new Event("libraryUpdated"));
+            }, 100);
+
+            return { success: true, token: jwt };
+        } catch (err) {
+            console.error("Login failed:", err);
+            return {
+                success: false,
+                message:
+                    err.response?.data?.message ||
+                    "Invalid email or password",
+            };
         }
     };
 
-    // Email/password signup
-    const signupWithEmail = async (email, password) => {
+    // ✅ Simplified login for external callers (like Login.js)
+    const loginWithToken = (jwt) => {
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            console.error("Signup error:", error);
-            alert(error.message);
+            const payload = JSON.parse(atob(jwt.split(".")[1]));
+
+            localStorage.setItem("token", jwt);
+
+            const userData = {
+                id: payload.sub || payload.userId,
+                email: payload.email,
+                name: payload.name || payload.email?.split("@")[0] || "User"
+            };
+
+            // ✅ Store user profile in localStorage
+            localStorage.setItem("userProfile", JSON.stringify({
+                name: userData.name,
+                email: userData.email,
+                avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+                joined: new Date().toLocaleDateString()
+            }));
+
+            setToken(jwt);
+            setCurrentUser(userData);
+
+            // ✅ CRITICAL: Force stats re-calculation
+            setTimeout(() => {
+                window.dispatchEvent(new Event("libraryUpdated"));
+            }, 100);
+
+            return userData;
+        } catch (err) {
+            console.error("Error logging in with token:", err);
+            return null;
         }
     };
 
-    // Email/password login
-    const loginWithEmail = async (email, password) => {
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            console.error("Login error:", error);
-            alert(error.message);
-        }
-    };
+    // ✅ LOGOUT
+    const logout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("userProfile");
 
-    // Logout
-    const logout = async () => {
-        try {
-            await signOut(auth);
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+        setToken(null);
+        setCurrentUser(null);
+
+        // ✅ Force stats re-calculation after logout
+        setTimeout(() => {
+            window.dispatchEvent(new Event("libraryUpdated"));
+        }, 100);
     };
 
     const value = {
-        currentUser,
-        loading,
-        loginWithGoogle,
-        signupWithEmail,
-        loginWithEmail,
+        currentUser, // Changed from 'user'
+        token,
+        login,
+        loginWithToken, // Added for external use
         logout,
+        isAuthenticated: !!token && !!currentUser,
+        loading,
     };
 
     return (
@@ -80,4 +179,9 @@ export const AuthProvider = ({ children }) => {
             {!loading && children}
         </AuthContext.Provider>
     );
+};
+
+// ✅ Custom hook
+export const useAuth = () => {
+    return useContext(AuthContext);
 };

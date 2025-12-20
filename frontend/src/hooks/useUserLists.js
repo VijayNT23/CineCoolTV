@@ -1,13 +1,12 @@
 // src/hooks/useUserLists.js
+// ✅ FIXED: Removed Firebase, now uses backend API + localStorage
 import { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 
 const STORAGE_KEY = "cinecoolLibrary";
 
 export function useUserLists() {
-    const [user, setUser] = useState(null);
+    const { currentUser, API } = useAuth();
     const [lists, setLists] = useState({
         watchlist: [],
         watching: [],
@@ -17,54 +16,57 @@ export function useUserLists() {
         completed: [],
     });
 
-    // ✅ Detect Auth Changes
+    // ✅ Load lists from backend or localStorage
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth, async (u) => {
-            setUser(u);
-
-            if (u) {
-                // User logged in → Load their Firestore data
-                const ref = doc(db, "users", u.uid);
-                const snap = await getDoc(ref);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    if (data.lists) setLists(data.lists);
-                } else {
-                    // Initialize new user
-                    await setDoc(ref, { lists });
+        const loadLists = async () => {
+            if (currentUser) {
+                // User logged in → Load from backend
+                try {
+                    const response = await API.get("/api/user/lists");
+                    if (response.data) {
+                        setLists(response.data.lists || lists);
+                    }
+                } catch (error) {
+                    console.error("Error loading lists from backend:", error);
+                    // Fallback to localStorage
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) setLists(JSON.parse(saved));
                 }
             } else {
                 // Guest → Load from localStorage
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) setLists(JSON.parse(saved));
             }
-        });
-        return () => unsub();
-    }, [lists]);
+        };
 
-    // ✅ Sync lists to Firestore or localStorage
+        loadLists();
+    }, [currentUser]);
+
+    // ✅ Sync lists to backend or localStorage
     useEffect(() => {
         const sync = async () => {
-            if (user) {
+            if (currentUser) {
+                // Save to backend
                 try {
-                    const ref = doc(db, "users", user.uid);
-                    await updateDoc(ref, { lists });
-                } catch {
-                    await setDoc(doc(db, "users", user.uid), { lists });
+                    await API.post("/api/user/lists", { lists });
+                } catch (error) {
+                    console.error("Error syncing lists to backend:", error);
+                    // Fallback to localStorage
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
                 }
             } else {
+                // Save to localStorage
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
             }
 
-            // Notify others (for library UI updates)
+            // Notify other components
             window.dispatchEvent(
                 new CustomEvent("libraryUpdated", { detail: getLibraryFromLists(lists) })
             );
         };
 
         sync();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [lists, user]);
+    }, [lists, currentUser]);
 
     // ✅ Add item to list
     const addToList = (listName, item) => {
@@ -87,7 +89,7 @@ export function useUserLists() {
     // ✅ Check item existence
     const isInList = (listName, id) => lists[listName]?.some((i) => i.id === id);
 
-    return { user, lists, addToList, removeFromList, isInList };
+    return { user: currentUser, lists, addToList, removeFromList, isInList };
 }
 
 // 🔹 Helper — flatten all lists for display/stat use

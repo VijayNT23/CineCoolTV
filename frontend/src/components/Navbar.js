@@ -1,5 +1,5 @@
 // src/components/Navbar.js
-// UPDATED: Perfect navbar-banner sync with CSS variables
+// UPDATED: Removed click navigation from CineCoolTV logo
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -32,7 +32,23 @@ const Navbar = () => {
     { name: "Search", icon: <Search size={16} />, path: "/search" },
   ];
 
-  const isActive = (path) => location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
+  const isActive = (path) => {
+    // Special handling for home path
+    if (path === "/") {
+      return location.pathname === "/" || location.pathname === "/home";
+    }
+    return location.pathname.startsWith(path);
+  };
+
+  const handleNavigate = (path) => {
+    // Consolidate home navigation to single path
+    if (path === "/" || path === "/home") {
+      navigate("/");
+    } else {
+      navigate(path);
+    }
+    setMenuOpen(false);
+  };
 
   return (
     <>
@@ -59,17 +75,16 @@ const Navbar = () => {
         }}
       >
         <div className="flex items-center justify-between h-full px-4 sm:px-6 md:px-8 py-2">
-          {/* Logo */}
+          {/* Logo - NO CLICK NAVIGATION */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer select-none group"
-            onClick={() => navigate("/")}
-            aria-label="Go to home"
+            className="flex items-center gap-2.5 select-none"
+            aria-label="CineCoolTV Logo"
           >
             <div className="relative flex items-center">
               <img
                 src={logo}
                 alt="CineCoolTV"
-                className="h-10 w-auto object-contain transition-all duration-300 transform-gpu group-hover:scale-110 group-hover:rotate-3"
+                className="h-10 w-auto object-contain"
                 style={{
                   filter:
                     theme === "light"
@@ -85,7 +100,7 @@ const Navbar = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.name}
-                onClick={() => navigate(tab.path)}
+                onClick={() => handleNavigate(tab.path)}
                 className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 overflow-hidden group
                   ${isActive(tab.path)
                     ? "text-white shadow-md"
@@ -162,7 +177,7 @@ const Navbar = () => {
 
             {/* Profile icon - just navigates to profile page */}
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => handleNavigate("/profile")}
               className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 focus:outline-none
                 ${theme === "dark" 
                   ? "bg-gradient-to-br from-gray-800 to-gray-900 text-white border border-gray-700/50" 
@@ -208,10 +223,7 @@ const Navbar = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.name}
-                  onClick={() => {
-                    navigate(tab.path);
-                    setMenuOpen(false);
-                  }}
+                  onClick={() => handleNavigate(tab.path)}
                   className={`w-full flex items-center gap-3 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-150
                     ${isActive(tab.path) 
                       ? "text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-md" 
@@ -239,10 +251,7 @@ const Navbar = () => {
               
               {/* Profile option in mobile menu */}
               <button
-                onClick={() => {
-                  navigate("/profile");
-                  setMenuOpen(false);
-                }}
+                onClick={() => handleNavigate("/profile")}
                 className={`w-full flex items-center gap-3 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-150
                   ${isActive("/profile") 
                     ? "text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-md" 

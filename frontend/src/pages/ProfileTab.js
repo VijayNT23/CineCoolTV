@@ -1,14 +1,10 @@
 // src/pages/ProfileTab.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Pencil, Check, LogOut, BarChart3, Heart, Tv, Film, Clock, Calendar, Mail, ChevronDown, Star, Trophy, X, Zap } from "lucide-react";
+import { Pencil, Check, LogOut, BarChart3, Heart, Tv, Film, Clock, Calendar, Mail, ChevronDown, Star, Trophy, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import { clearLibrary, getLibrary } from "../utils/libraryUtils";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../firebase";
 import { calculateTotalXP, getCineStatus, getNextLevelInfo, getFunMessage, calculateAnimeStats } from "../utils/cineLevelUtils";
 
 const defaultAvatar = "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png";
@@ -22,7 +18,7 @@ const ProfileTab = () => {
         name: "Guest",
         email: "",
         avatar: defaultAvatar,
-        joined: new Date().toLocaleDateString(),
+        joined: "",
     });
     const [editing, setEditing] = useState(false);
     const [library, setLibrary] = useState([]);
@@ -76,16 +72,11 @@ const ProfileTab = () => {
         totalMinutes: 0,
         totalHours: 0,
     });
-    const [authMode, setAuthMode] = useState(null);
-    const [authEmail, setAuthEmail] = useState("");
-    const [authPassword, setAuthPassword] = useState("");
-    const [authError, setAuthError] = useState("");
-    const [authLoading, setAuthLoading] = useState(false);
     const nameRef = useRef();
 
-    // Reset all stats when user logs out
-    const resetAllStats = useCallback(() => {
-        setLibrary([]);
+    // ✅ FIXED: Reset only stats, NOT library on user change
+    const resetStats = useCallback(() => {
+        // Only reset display stats, NOT the actual library data
         setStats({
             total: 0,
             completed: 0,
@@ -117,36 +108,39 @@ const ProfileTab = () => {
             thisMonth: [],
             allTime: [],
         });
+        setXpStats({
+            totalXP: 0,
+            level: 1,
+            title: "🎟️ Casual Viewer",
+            emoji: "🎟️",
+            nextLevelXP: 500,
+            xpNeeded: 500,
+            progress: 0,
+        });
+        setAnimeStats({
+            total: 0,
+            completed: 0,
+            favorites: 0,
+            totalEpisodes: 0,
+            totalMinutes: 0,
+            totalHours: 0,
+        });
     }, []);
 
-    // Load profile from Firebase or localStorage
+    // ✅ FIXED: Load profile from localStorage with safety check
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                if (currentUser) {
-                    const ref = doc(db, "users", currentUser.uid, "profile", "info");
-                    const snap = await getDoc(ref);
-                    const data = snap.exists()
-                        ? snap.data()
-                        : {
-                            name: currentUser.displayName || "New User",
-                            email: currentUser.email,
-                            avatar: currentUser.photoURL || defaultAvatar,
-                            joined: new Date().toLocaleDateString(),
-                        };
-                    setProfile(data);
-                    await setDoc(ref, data, { merge: true });
-                    localStorage.setItem("userProfile", JSON.stringify({ uid: currentUser.uid, ...data }));
-                } else {
-                    // Guest mode - load from localStorage or set default
+                // ✅ CRITICAL FIX: If no currentUser, show guest mode
+                if (!currentUser) {
                     const stored = localStorage.getItem("userProfile");
                     if (stored) {
                         const parsed = JSON.parse(stored);
                         setProfile({
                             name: parsed.name || "Guest",
-                            email: "",
+                            email: parsed.email || "",
                             avatar: parsed.avatar || defaultAvatar,
-                            joined: "",
+                            joined: parsed.joined || "",
                         });
                     } else {
                         setProfile({
@@ -155,25 +149,62 @@ const ProfileTab = () => {
                             avatar: defaultAvatar,
                             joined: "",
                         });
+                        resetStats(); // Only reset stats, not library
                     }
-                    resetAllStats();
+                    return;
+                }
+
+                // ✅ If currentUser exists, load or create profile
+                const stored = localStorage.getItem("userProfile");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    // ✅ Safety check: only set if email matches currentUser
+                    if (parsed.email === currentUser.email) {
+                        setProfile({
+                            name: parsed.name || currentUser.name || "User",
+                            email: parsed.email || currentUser.email || "",
+                            avatar: parsed.avatar || defaultAvatar,
+                            joined: parsed.joined || new Date().toLocaleDateString(),
+                        });
+                    } else {
+                        // ✅ Create new profile from currentUser data
+                        const newProfile = {
+                            name: currentUser.name || currentUser.email?.split("@")[0] || "User",
+                            email: currentUser.email,
+                            avatar: defaultAvatar,
+                            joined: new Date().toLocaleDateString(),
+                        };
+                        setProfile(newProfile);
+                        localStorage.setItem("userProfile", JSON.stringify(newProfile));
+                    }
+                } else {
+                    // ✅ Create new profile if none exists
+                    const newProfile = {
+                        name: currentUser.name || currentUser.email?.split("@")[0] || "User",
+                        email: currentUser.email,
+                        avatar: defaultAvatar,
+                        joined: new Date().toLocaleDateString(),
+                    };
+                    setProfile(newProfile);
+                    localStorage.setItem("userProfile", JSON.stringify(newProfile));
                 }
             } catch (err) {
                 console.error("Error fetching profile:", err);
+                setProfile({
+                    name: "Guest",
+                    email: "",
+                    avatar: defaultAvatar,
+                    joined: "",
+                });
             }
         };
         fetchProfile();
-    }, [currentUser, resetAllStats]);
+    }, [currentUser, resetStats]);
 
-    // Save profile name - works for both guest and logged-in users
+    // ✅ FIXED: Save profile name - localStorage only
     const saveName = async () => {
         setEditing(false);
-        if (currentUser) {
-            await setDoc(doc(db, "users", currentUser.uid, "profile", "info"), profile, { merge: true });
-            localStorage.setItem("userProfile", JSON.stringify({ uid: currentUser.uid, ...profile }));
-        } else {
-            localStorage.setItem("userProfile", JSON.stringify(profile));
-        }
+        localStorage.setItem("userProfile", JSON.stringify(profile));
     };
 
     // Change avatar - works for both guest and logged-in users
@@ -184,80 +215,36 @@ const ProfileTab = () => {
         reader.onloadend = () => {
             const newProfile = { ...profile, avatar: reader.result };
             setProfile(newProfile);
-
-            if (!currentUser) {
-                localStorage.setItem("userProfile", JSON.stringify(newProfile));
-            }
+            localStorage.setItem("userProfile", JSON.stringify(newProfile));
         };
         reader.readAsDataURL(file);
     };
 
-    // Logout
+    // ✅ FIXED: Logout - REMOVED clearLibrary() - library should persist
     const handleLogout = async () => {
         await logout();
-        clearLibrary();
-        localStorage.removeItem("userProfile");
+
+        // ❌ REMOVED: clearLibrary(); - Library should persist for guest mode
+
+        // Note: userProfile is already removed by AuthContext's logout function
+        // So we don't need to remove it here again
+
         setProfile({
             name: "Guest",
             email: "",
             avatar: defaultAvatar,
             joined: "",
         });
-        resetAllStats();
-        window.dispatchEvent(new CustomEvent("libraryUpdated"));
+
+        resetStats(); // Reset display stats only
+
+        // Use Event instead of CustomEvent for consistency
+        window.dispatchEvent(new Event("libraryUpdated"));
     };
 
-    // Auth handlers
-    const handleEmailLogin = async (e) => {
-        e.preventDefault();
-        setAuthLoading(true);
-        setAuthError("");
-        try {
-            await signInWithEmailAndPassword(auth, authEmail, authPassword);
-            setAuthMode(null);
-            setAuthEmail("");
-            setAuthPassword("");
-        } catch (err) {
-            setAuthError(err.message);
-        } finally {
-            setAuthLoading(false);
-        }
-    };
-
-    const handleEmailSignup = async (e) => {
-        e.preventDefault();
-        setAuthLoading(true);
-        setAuthError("");
-        try {
-            await createUserWithEmailAndPassword(auth, authEmail, authPassword);
-            setAuthMode(null);
-            setAuthEmail("");
-            setAuthPassword("");
-        } catch (err) {
-            setAuthError(err.message);
-        } finally {
-            setAuthLoading(false);
-        }
-    };
-
+    // ✅ FIXED: Google auth redirect
     const handleGoogleAuth = async () => {
-        setAuthLoading(true);
-        setAuthError("");
-        try {
-            await signInWithPopup(auth, googleProvider);
-            setAuthMode(null);
-        } catch (err) {
-            setAuthError(err.message);
-        } finally {
-            setAuthLoading(false);
-        }
-    };
-
-    const closeAuthForm = () => {
-        setAuthMode(null);
-        setAuthError("");
-        setAuthEmail("");
-        setAuthPassword("");
+        window.location.href = "/login?provider=google";
     };
 
     // Calculate time statistics
@@ -448,10 +435,10 @@ const ProfileTab = () => {
         };
     }, []);
 
-    // Calculate all stats
+    // ✅ FIXED: Calculate all stats - library persists between user sessions
     const calculateStats = useCallback(async () => {
         if (!currentUser) {
-            resetAllStats();
+            resetStats(); // Only reset stats, not library
             return;
         }
 
@@ -492,9 +479,9 @@ const ProfileTab = () => {
             const animeData = calculateAnimeStats(lib);
             setAnimeStats(animeData);
         } else {
-            resetAllStats();
+            resetStats(); // Only reset stats if no library items
         }
-    }, [currentUser, calculateTimeStats, calculateGenreStats, calculateFilteredStats, filter, resetAllStats]);
+    }, [currentUser, calculateTimeStats, calculateGenreStats, calculateFilteredStats, filter, resetStats]);
 
     // Format time for display
     const formatTime = (time, showMonths = true) => {
@@ -596,118 +583,6 @@ const ProfileTab = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
             >
-                {/* Auth Form Modal */}
-                <AnimatePresence>
-                    {authMode && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                            onClick={closeAuthForm}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
-                                className={`rounded-2xl p-6 w-full max-w-md shadow-2xl border ${
-                                    isDark
-                                        ? "bg-gray-900 border-white/20"
-                                        : "bg-white border-gray-300"
-                                }`}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className={`text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
-                                        {authMode === "login" ? "Log In" : "Sign Up"}
-                                    </h3>
-                                    <button
-                                        onClick={closeAuthForm}
-                                        className={`p-2 rounded-full ${
-                                            isDark ? "hover:bg-white/10" : "hover:bg-gray-100"
-                                        }`}
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-
-                                <form onSubmit={authMode === "login" ? handleEmailLogin : handleEmailSignup} className="space-y-4">
-                                    <div>
-                                        <input
-                                            type="email"
-                                            placeholder="Email"
-                                            value={authEmail}
-                                            onChange={(e) => setAuthEmail(e.target.value)}
-                                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 ${
-                                                isDark
-                                                    ? "bg-gray-800 border-gray-600 text-white focus:ring-blue-500"
-                                                    : "bg-white border-gray-300 text-gray-900 focus:ring-blue-500"
-                                            }`}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="password"
-                                            placeholder="Password"
-                                            value={authPassword}
-                                            onChange={(e) => setAuthPassword(e.target.value)}
-                                            className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 ${
-                                                isDark
-                                                    ? "bg-gray-800 border-gray-600 text-white focus:ring-blue-500"
-                                                    : "bg-white border-gray-300 text-gray-900 focus:ring-blue-500"
-                                            }`}
-                                            required
-                                        />
-                                    </div>
-                                    {authError && (
-                                        <p className={`text-sm ${isDark ? "text-red-400" : "text-red-600"}`}>
-                                            {authError}
-                                        </p>
-                                    )}
-                                    <button
-                                        type="submit"
-                                        disabled={authLoading}
-                                        className={`w-full py-3 rounded-xl font-bold transition-all duration-200 ${
-                                            authLoading
-                                                ? "bg-gray-400 cursor-not-allowed"
-                                                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500"
-                                        } text-white`}
-                                    >
-                                        {authLoading ? "Processing..." : (authMode === "login" ? "Log In" : "Sign Up")}
-                                    </button>
-                                </form>
-
-                                <div className="mt-6">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className={`flex-1 h-px ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>OR</span>
-                                        <div className={`flex-1 h-px ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                                    </div>
-
-                                    <button
-                                        onClick={handleGoogleAuth}
-                                        disabled={authLoading}
-                                        className={`w-full px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-lg flex items-center justify-center gap-3 ${
-                                            isDark
-                                                ? "bg-white text-gray-900 hover:bg-gray-100"
-                                                : "bg-gray-900 text-white hover:bg-gray-800"
-                                        } ${authLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                                    >
-                                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                        </svg>
-                                        Continue with Google
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
                 {/* Compact Profile Card */}
                 <div className={`relative rounded-xl p-4 mb-6 shadow-lg border ${
                     isDark
@@ -880,21 +755,21 @@ const ProfileTab = () => {
                                         <p className={`text-xs mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                                             Sign up to save your library, stats, and preferences across all devices
                                         </p>
-                                        
+
                                         <div className="space-y-2">
                                             <button
-                                                onClick={() => setAuthMode("signup")}
+                                                onClick={() => window.location.href = "/signup"}
                                                 className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 hover:scale-105"
                                             >
                                                 🚀 SIGN UP FOR FREE
                                             </button>
-                                            
+
                                             <div className="flex items-center gap-2 justify-center mt-2">
                                                 <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                                     Already have an account?
                                                 </span>
                                                 <button
-                                                    onClick={() => setAuthMode("login")}
+                                                    onClick={() => window.location.href = "/login"}
                                                     className={`text-xs font-bold hover:underline ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
                                                 >
                                                     Log In
@@ -911,7 +786,6 @@ const ProfileTab = () => {
                 {/* Stats Section */}
                 {currentUser ? (
                     <ProfileStats
-                        currentUser={currentUser}
                         filter={filter}
                         setFilter={setFilter}
                         showFilterDropdown={showFilterDropdown}
@@ -931,7 +805,7 @@ const ProfileTab = () => {
                         isDark={isDark}
                     />
                 ) : (
-                    <GuestStats setAuthMode={setAuthMode} handleGoogleAuth={handleGoogleAuth} isDark={isDark} />
+                    <GuestStats handleGoogleAuth={handleGoogleAuth} isDark={isDark} />
                 )}
             </motion.div>
         </div>
@@ -939,7 +813,7 @@ const ProfileTab = () => {
 };
 
 // Guest Stats Component
-const GuestStats = ({ setAuthMode, handleGoogleAuth, isDark }) => {
+const GuestStats = ({ handleGoogleAuth, isDark }) => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -986,7 +860,7 @@ const GuestStats = ({ setAuthMode, handleGoogleAuth, isDark }) => {
                     {/* Center these buttons */}
                     <div className="flex flex-col sm:flex-row gap-2 justify-center">
                         <button
-                            onClick={() => setAuthMode("login")}
+                            onClick={() => window.location.href = "/login"}
                             className={`px-4 py-2.5 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border flex-1 max-w-xs mx-auto ${
                                 isDark
                                     ? "bg-blue-600/20 text-blue-400 border-blue-500/30 hover:bg-blue-600/30"
@@ -996,7 +870,7 @@ const GuestStats = ({ setAuthMode, handleGoogleAuth, isDark }) => {
                             Log In
                         </button>
                         <button
-                            onClick={() => setAuthMode("signup")}
+                            onClick={() => window.location.href = "/signup"}
                             className={`px-4 py-2.5 rounded-lg font-bold text-xs transition-all duration-200 shadow-lg border flex-1 max-w-xs mx-auto ${
                                 isDark
                                     ? "bg-green-600/20 text-green-400 border-green-500/30 hover:bg-green-600/30"

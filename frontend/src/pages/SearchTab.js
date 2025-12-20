@@ -31,6 +31,32 @@ const SearchTab = () => {
 
     const TMDB_KEY = process.env.REACT_APP_TMDB_API_KEY;
 
+    // ========== MEDIA TYPE MAPPING FUNCTION ==========
+    const getMappedType = (item) => {
+        // Get the TMDB media_type
+        const tmdbType = item.media_type || (item.title ? "movie" : "tv");
+        
+        // Check if it's anime (Japanese language OR animation genre)
+        const isAnime = item.original_language === 'ja' || 
+                       item.original_language === 'jp' || 
+                       (item.genre_ids && item.genre_ids.includes(16)) || // Animation genre ID
+                       item.isAnime;
+        
+        // Map TMDB types to our internal types
+        if (isAnime && tmdbType === "tv") {
+            return "anime";
+        }
+        if (tmdbType === "tv") {
+            return "series";
+        }
+        if (tmdbType === "movie") {
+            return "movie";
+        }
+        
+        return "movie"; // fallback
+    };
+    // ================================================
+
     // Fetch autocomplete suggestions
     const fetchSuggestions = useCallback(async (searchQuery) => {
         if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -202,16 +228,25 @@ const SearchTab = () => {
         await performSearch(query, newFilter);
     };
 
-    // 🧭 Navigate to details page
+    // 🧭 Navigate to details page - UPDATED WITH MEDIA TYPE MAPPING
     const handleCardClick = (item) => {
-        const mediaType = item.media_type || (item.title ? "movie" : "tv");
-        navigate(`/details/${mediaType}/${item.id}`);
+        // Use the mapping function to get the correct type
+        const finalType = getMappedType(item);
+        
+        navigate(`/details/${finalType}/${item.id}`, {
+            state: { 
+                type: finalType,
+                id: item.id
+            }
+        });
     };
 
-    // ➕ Add to Library
+    // ➕ Add to Library - UPDATED WITH MEDIA TYPE MAPPING
     const handleAddLibrary = async (e, item) => {
         e.stopPropagation();
-        const mediaType = item.media_type || (item.title ? "movie" : "tv");
+        // Use the mapping function to get the correct type
+        const mediaType = getMappedType(item);
+        
         const imageUrl = item.poster_path
             ? `${BASE_IMG}${item.poster_path}`
             : item.backdrop_path
@@ -232,10 +267,12 @@ const SearchTab = () => {
         window.dispatchEvent(new CustomEvent("libraryUpdated", { detail: updated }));
     };
 
-    // ❤️ Favorite toggle
+    // ❤️ Favorite toggle - UPDATED WITH MEDIA TYPE MAPPING
     const handleFavorite = async (e, item) => {
         e.stopPropagation();
-        const mediaType = item.media_type || (item.title ? "movie" : "tv");
+        // Use the mapping function to get the correct type
+        const mediaType = getMappedType(item);
+        
         const imageUrl = item.poster_path
             ? `${BASE_IMG}${item.poster_path}`
             : item.backdrop_path
@@ -251,6 +288,12 @@ const SearchTab = () => {
         const updated = await getLibrary();
         setRefreshKey((prev) => prev + 1);
         window.dispatchEvent(new CustomEvent("libraryUpdated", { detail: updated }));
+    };
+
+    // Get display type for UI
+    const getDisplayType = (item) => {
+        const type = getMappedType(item);
+        return type.charAt(0).toUpperCase() + type.slice(1);
     };
 
     // Filter options
@@ -320,45 +363,54 @@ const SearchTab = () => {
                                     <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-red-600 mx-auto"></div>
                                 </div>
                             ) : (
-                                suggestions.map((suggestion) => (
-                                    <button
-                                        key={`${suggestion.id}-${suggestion.media_type}`}
-                                        onClick={() => handleSuggestionClick(suggestion)}
-                                        className={`w-full text-left p-3 sm:p-4 hover:bg-red-500 hover:text-white transition-all duration-200 border-b last:border-b-0 ${
-                                            theme === "dark"
-                                                ? "border-gray-700 hover:bg-red-600"
-                                                : "border-gray-200 hover:bg-red-500"
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <img
-                                                    src={suggestion.poster_path ? `${BASE_IMG}${suggestion.poster_path}` : "https://via.placeholder.com/40x60?text=No+Image"}
-                                                    alt={suggestion.title || suggestion.name}
-                                                    className="w-8 h-12 sm:w-10 sm:h-15 object-cover rounded"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-sm sm:text-lg truncate">
-                                                        {suggestion.title || suggestion.name}
-                                                    </p>
-                                                    <p className={`text-xs sm:text-sm capitalize truncate ${
-                                                        theme === "dark" ? "text-gray-400" : "text-gray-600"
-                                                    }`}>
-                                                        {suggestion.media_type} • {suggestion.release_date?.substring(0,4) || suggestion.first_air_date?.substring(0,4) || 'N/A'}
-                                                        {suggestion.vote_average && ` • ⭐ ${suggestion.vote_average.toFixed(1)}`}
-                                                    </p>
+                                suggestions.map((suggestion) => {
+                                    const displayType = getMappedType(suggestion);
+                                    const displayTypeLabel = displayType.charAt(0).toUpperCase() + displayType.slice(1);
+                                    
+                                    return (
+                                        <button
+                                            key={`${suggestion.id}-${suggestion.media_type}`}
+                                            onClick={() => handleSuggestionClick(suggestion)}
+                                            className={`w-full text-left p-3 sm:p-4 hover:bg-red-500 hover:text-white transition-all duration-200 border-b last:border-b-0 ${
+                                                theme === "dark"
+                                                    ? "border-gray-700 hover:bg-red-600"
+                                                    : "border-gray-200 hover:bg-red-500"
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <img
+                                                        src={suggestion.poster_path ? `${BASE_IMG}${suggestion.poster_path}` : "https://via.placeholder.com/40x60?text=No+Image"}
+                                                        alt={suggestion.title || suggestion.name}
+                                                        className="w-8 h-12 sm:w-10 sm:h-15 object-cover rounded"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-sm sm:text-lg truncate">
+                                                            {suggestion.title || suggestion.name}
+                                                        </p>
+                                                        <p className={`text-xs sm:text-sm capitalize truncate ${
+                                                            theme === "dark" ? "text-gray-400" : "text-gray-600"
+                                                        }`}>
+                                                            {displayTypeLabel} • {suggestion.release_date?.substring(0,4) || suggestion.first_air_date?.substring(0,4) || 'N/A'}
+                                                            {suggestion.vote_average && ` • ⭐ ${suggestion.vote_average.toFixed(1)}`}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-semibold flex-shrink-0 ml-2 ${
+                                                    displayType === 'movie'
+                                                        ? 'bg-blue-500 text-white'
+                                                        : displayType === 'series'
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-pink-500 text-white' // anime
+                                                }`}>
+                                                    {displayType === 'movie' ? 'MOVIE' : 
+                                                     displayType === 'series' ? 'TV' : 
+                                                     'ANIME'}
+                                                </span>
                                             </div>
-                                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-semibold flex-shrink-0 ml-2 ${
-                                                suggestion.media_type === 'movie'
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-purple-500 text-white'
-                                            }`}>
-                                                {suggestion.media_type === 'movie' ? 'MOVIE' : 'TV'}
-                                            </span>
-                                        </div>
-                                    </button>
-                                ))
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     )}
@@ -435,7 +487,9 @@ const SearchTab = () => {
                     <>
                         <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
                             {results.map((item) => {
-                                const mediaType = item.media_type || (item.title ? "movie" : "tv");
+                                // Use the mapping function to get the correct type
+                                const mediaType = getMappedType(item);
+                                const displayType = getDisplayType(item);
                                 const imageUrl = item.poster_path
                                     ? `${BASE_IMG}${item.poster_path}`
                                     : item.backdrop_path
@@ -507,7 +561,9 @@ const SearchTab = () => {
                                             </p>
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="capitalize truncate flex-1">
-                                                    {mediaType === 'movie' ? '🎥' : '📺'} • {item.release_date?.substring(0,4) || item.first_air_date?.substring(0,4) || 'N/A'}
+                                                    {mediaType === 'movie' ? '🎥' : 
+                                                     mediaType === 'series' ? '📺' : 
+                                                     '🌸'} • {item.release_date?.substring(0,4) || item.first_air_date?.substring(0,4) || 'N/A'}
                                                 </span>
                                                 {item.vote_average > 0 && (
                                                     <span className="flex items-center gap-1 flex-shrink-0 ml-1">
@@ -515,6 +571,15 @@ const SearchTab = () => {
                                                     </span>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {/* Type Badge */}
+                                        <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+                                            mediaType === 'movie' ? 'bg-blue-500 text-white' :
+                                            mediaType === 'series' ? 'bg-purple-500 text-white' :
+                                            'bg-pink-500 text-white' // anime
+                                        }`}>
+                                            {displayType}
                                         </div>
                                     </div>
                                 );

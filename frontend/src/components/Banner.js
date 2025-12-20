@@ -1,9 +1,6 @@
-// src/components/Banner.js
-// Fixed: Added icons to share options, improved mobile alignment, 
-// fixed slider stop on share click, and improved bookmark synchronization
-
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import BannerShimmer from "./BannerShimmer";
 import { useNavigate } from "react-router-dom";
 import {
     Play,

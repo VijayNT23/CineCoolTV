@@ -49,14 +49,16 @@ const SeriesTab = () => {
         <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
             <Banner fetchUrl={requests.trendingSeries} type="series" />
 
-            <Row title="🔥 Trending Series" fetchUrl={requests.trendingSeries} type="series" isLargeRow />
-            <Row title="⭐ Top Rated" fetchUrl={requests.topRatedSeries} type="series" />
-            <Row title="📺 Popular Shows" fetchUrl={requests.popularSeries} type="series" />
-            <Row title="🎭 Drama" fetchUrl={requests.dramaSeries} type="series" />
-            <Row title="😂 Comedy" fetchUrl={requests.comedySeries} type="series" />
-            <Row title="💥 Action & Adventure" fetchUrl={requests.actionAdventureSeries} type="series" />
-            <Row title="🔪 Crime" fetchUrl={requests.crimeSeries} type="series" />
-            <Row title="🎤 Reality" fetchUrl={requests.realitySeries} type="series" />
+            <Row title="Trending Now" fetchUrl={requests.trendingSeries} type="tv" />
+            <Row title="Popular Series" fetchUrl={requests.popularSeries} type="tv" />
+            <Row title="Top Rated Series" fetchUrl={requests.topRatedSeries} type="tv" />
+            <Row title="Airing Today" fetchUrl={requests.airingTodaySeries} type="tv" />
+            <Row title="On The Air" fetchUrl={requests.onTheAirSeries} type="tv" />
+            <Row title="Drama" fetchUrl={requests.dramaSeries} type="tv" />
+            <Row title="Comedy" fetchUrl={requests.comedySeries} type="tv" />
+            <Row title="Action & Adventure" fetchUrl={requests.actionAdventureSeries} type="tv" />
+            <Row title="Crime" fetchUrl={requests.crimeSeries} type="tv" />
+            <Row title="Reality" fetchUrl={requests.realitySeries} type="tv" />
         </div>
     );
 };
