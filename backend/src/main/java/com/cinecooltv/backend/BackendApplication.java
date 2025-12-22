@@ -12,18 +12,6 @@ public class BackendApplication {
 
     public static void main(String[] args) {
 
-        // ⭐ Load .env BEFORE Spring Boot starts
-        io.github.cdimascio.dotenv.Dotenv dotenv =
-                io.github.cdimascio.dotenv.Dotenv.configure()
-                        .ignoreIfMissing()
-                        .load();
-
-        dotenv.entries().forEach(entry ->
-                System.setProperty(entry.getKey(), entry.getValue())
-        );
-
-        System.out.println("🔐 Loaded .env BEFORE Spring Boot initialization.");
-
         SpringApplication.run(BackendApplication.class, args);
 
         System.out.println("🎬 Backend started successfully on http://localhost:8080");
@@ -37,17 +25,5 @@ public class BackendApplication {
         System.out.println("🔁 @PostConstruct executed — environment ready.");
     }
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/api/**")
-                        .allowedOriginPatterns("*")
-                        .allowedMethods("*")
-                        .allowedHeaders("*")
-                        .allowCredentials(true);
-            }
-        };
     }
 }
