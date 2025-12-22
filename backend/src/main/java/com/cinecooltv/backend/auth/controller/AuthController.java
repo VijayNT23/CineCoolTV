@@ -9,7 +9,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(
+        origins = {
+                "http://localhost:3000",
+                "https://cine-cool-tv.vercel.app"
+        }
+)
 public class AuthController {
 
     private final AuthService authService;
