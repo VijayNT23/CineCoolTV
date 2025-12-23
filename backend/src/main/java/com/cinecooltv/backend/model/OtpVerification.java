@@ -15,5 +15,5 @@ public class OtpVerification {
     private String email;
     private String otp;
     private LocalDateTime expiryTime;
-    private boolean used = false;
+    private boolean used;
 }

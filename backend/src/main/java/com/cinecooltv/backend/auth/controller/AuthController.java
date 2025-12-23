@@ -31,12 +31,15 @@ public class AuthController {
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest request) {
         authService.verifyOtp(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(Map.of("message", "Email verified"));
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        String token = authService.login(request.getEmail(), request.getPassword());
+        String token = authService.login(
+                request.getEmail(),
+                request.getPassword()
+        );
         return ResponseEntity.ok(Map.of("token", token));
     }
 
@@ -54,11 +57,5 @@ public class AuthController {
                 request.getNewPassword()
         );
         return ResponseEntity.ok(Map.of("message", "Password updated"));
-    }
-
-    @PostMapping("/resend-otp")
-    public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest request) {
-        authService.resendOtp(request.getEmail());
-        return ResponseEntity.ok(Map.of("message", "OTP resent"));
     }
 }
