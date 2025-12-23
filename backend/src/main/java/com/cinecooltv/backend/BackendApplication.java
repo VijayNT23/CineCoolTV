@@ -26,6 +26,10 @@ public class BackendApplication {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
+                        .allowedOrigins(
+                                "http://localhost:3000",
+                                "https://cine-cool-tv.vercel.app"
+                        )
                         .allowedOriginPatterns("*")
                         .allowedMethods("*")
                         .allowedHeaders("*")

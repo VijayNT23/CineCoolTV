@@ -16,7 +16,7 @@ function AddMovieForm({ onMovieAdded }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        axios.post("http://localhost:8080/api/movies", form)
+        axios.post("https://cinecooltv-backend.onrender.com/api/movies", form)
             .then(() => {
                 onMovieAdded(); // refresh movie list
                 setForm({ title: "", genre: "", director: "", releaseYear: "", rating: "" });

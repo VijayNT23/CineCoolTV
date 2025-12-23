@@ -5,7 +5,7 @@ const MovieList = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetch("http://localhost:8080/api/movies")
+        fetch("https://cinecooltv-backend.onrender.com/api/movies")
             .then((res) => {
                 if (!res.ok) {
                     throw new Error("Failed to fetch movies");
@@ -29,7 +29,7 @@ const MovieList = () => {
 
     const toggleFavorite = async (id) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/movies/${id}/favorite`, {
+            const res = await fetch(`https://cinecooltv-backend.onrender.com/api/movies/${id}/favorite`, {
                 method: "PUT",
             });
             if (!res.ok) throw new Error("Failed to toggle favorite");

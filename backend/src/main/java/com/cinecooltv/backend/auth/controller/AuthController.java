@@ -19,15 +19,20 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+        try {
+            authService.signup(
+                    request.getEmail(),
+                    request.getPassword()
+            );
 
-        authService.signup(
-                request.getEmail(),
-                request.getPassword()
-        );
-
-        return ResponseEntity.ok(
-                Map.of("message", "OTP sent to email")
-        );
+            return ResponseEntity.ok(
+                    Map.of("message", "OTP sent to email")
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/verify-otp")

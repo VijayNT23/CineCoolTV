@@ -4,7 +4,7 @@ import axios from "axios";
 const AuthContext = createContext(null);
 
 // ✅ Backend base URL
-const API_BASE = "http://localhost:8080";
+const API_BASE = "https://cinecooltv-backend.onrender.com";
 
 export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null); // Changed from [user, setUser]

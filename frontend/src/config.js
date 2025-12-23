@@ -1,5 +1,5 @@
 const config = {
-    backendUrl: process.env.REACT_APP_API_URL || "http://localhost:8080",
+    backendUrl: process.env.REACT_APP_API_URL || "https://cinecooltv-backend.onrender.com",
 
     tmdbApiKey: process.env.REACT_APP_TMDB_API_KEY,
     firebase: {

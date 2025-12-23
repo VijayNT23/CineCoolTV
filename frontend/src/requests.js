@@ -1,4 +1,4 @@
-// src/requests.js - REMOVED language filters since we filter client-side
+// src/requests.js
 import config from './config';
 
 const API_KEY = config.tmdbApiKey;
