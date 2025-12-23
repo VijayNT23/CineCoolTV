@@ -1,4 +1,4 @@
-package com.cinecooltv.config;
+package com.cinecooltv.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,18 +11,16 @@ public class CorsConfig {
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
-
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "https://cinecooltv-backend.onrender.com",
-                                "https://cine-cool-tv.vercel.app"
+                                "https://cine-cool-tv.vercel.app",
+                                "http://localhost:3000"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(true)
-                        .maxAge(3600);
+                        .allowCredentials(true);
             }
         };
     }
