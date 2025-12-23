@@ -1,25 +1,22 @@
-# Use official Java 21 image
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:17-jdk
 
-# Set working directory
+# Install Maven
+RUN apt-get update && apt-get install -y maven
+
 WORKDIR /app
 
-# Copy Maven wrapper & pom
-COPY mvnw .
-COPY .mvn .mvn
+# Copy pom first for caching
 COPY pom.xml .
 
 # Download dependencies
-RUN ./mvnw dependency:go-offline
+RUN mvn dependency:go-offline
 
 # Copy source
 COPY src src
 
-# Build the app
-RUN ./mvnw clean package -DskipTests
+# Build app
+RUN mvn clean package -DskipTests
 
-# Expose port
 EXPOSE 8080
 
-# Run app
-CMD ["java", "-jar", "target/*.jar"]
+CMD ["java", "-jar", "target/backend-0.0.1-SNAPSHOT.jar"]
