@@ -11,29 +11,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class BackendApplication {
 
     public static void main(String[] args) {
-
-        // OPTIONAL: dotenv only for LOCAL
-        // On Render, ENV vars come automatically
-        try {
-            io.github.cdimascio.dotenv.Dotenv dotenv =
-                    io.github.cdimascio.dotenv.Dotenv.configure()
-                            .ignoreIfMissing()
-                            .load();
-
-            dotenv.entries().forEach(entry ->
-                    System.setProperty(entry.getKey(), entry.getValue())
-            );
-
-            System.out.println("🔐 .env loaded (local only)");
-        } catch (Exception ignored) {}
-
         SpringApplication.run(BackendApplication.class, args);
-        System.out.println("🚀 Backend started");
+        System.out.println("🚀 CineCoolTV Backend started successfully");
     }
 
     @PostConstruct
     public void init() {
-        System.out.println("✅ Environment ready");
+        System.out.println("✅ Environment variables loaded by Spring");
     }
 
     @Bean
