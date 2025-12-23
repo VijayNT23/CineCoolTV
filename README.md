@@ -165,7 +165,7 @@ Create `.env`:
 
 ```env
 REACT_APP_TMDB_API_KEY=your-tmdb-api-key
-REACT_APP_API_BASE_URL=http://localhost:8080
+REACT_APP_API_BASE_URL=https://cinecooltv-backend.onrender.com
 ```
 
 Install dependencies and start:
