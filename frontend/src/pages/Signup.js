@@ -12,8 +12,8 @@ const Signup = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅ Added for password
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ✅ Added for confirm password
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -40,15 +40,18 @@ const Signup = () => {
         name,
       });
 
-      if (response.status === 200) {
-        setMessage("OTP sent to your email. Please verify to complete registration.");
-        setStep(2);
-      } else {
-        setError("Registration failed");
-      }
+      // ✅ SUCCESS - No need to check status, Axios wouldn't throw if not 2xx
+      setMessage("OTP sent to your email. Please verify to complete registration.");
+      setStep(2);
+
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      // ✅ SHOW BACKEND MESSAGE PROPERLY
+      const msg =
+          err.response?.data?.message ||
+          "Registration failed. Please try again.";
+      setError(msg);
       console.error("Signup error:", err);
+
     } finally {
       setLoading(false);
     }
@@ -60,22 +63,25 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8080/auth/verify-otp", {
+      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/verify-otp`, {
         email,
         otp,
       });
 
-      if (response.status === 200) {
-        setMessage("Account verified successfully! Redirecting to login...");
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
-      } else {
-        setError("OTP verification failed");
-      }
+      // ✅ SUCCESS
+      setMessage("Account verified successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+
     } catch (err) {
-      setError(err.response?.data?.message || "OTP verification failed. Please try again.");
+      // ✅ SHOW BACKEND MESSAGE PROPERLY
+      const msg =
+          err.response?.data?.message ||
+          "OTP verification failed. Please try again.";
+      setError(msg);
       console.error("OTP verification error:", err);
+
     } finally {
       setLoading(false);
     }
@@ -160,7 +166,6 @@ const Signup = () => {
                     />
                   </div>
 
-                  {/* ✅ UPDATED: Password input with show/hide toggle */}
                   <div className="relative">
                     <label htmlFor="password" className="sr-only">
                       Password
@@ -187,7 +192,6 @@ const Signup = () => {
                     </button>
                   </div>
 
-                  {/* ✅ UPDATED: Confirm Password input with show/hide toggle */}
                   <div className="relative">
                     <label htmlFor="confirm-password" className="sr-only">
                       Confirm Password
@@ -292,7 +296,6 @@ const Signup = () => {
                   <button
                       type="button"
                       onClick={() => {
-                        // Resend OTP functionality
                         handleSignup({ preventDefault: () => {} });
                       }}
                       disabled={loading}

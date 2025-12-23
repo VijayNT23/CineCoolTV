@@ -24,10 +24,7 @@ public class AuthController {
                     request.getEmail(),
                     request.getPassword()
             );
-
-            return ResponseEntity.ok(
-                    Map.of("message", "OTP sent to email")
-            );
+            return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
         } catch (RuntimeException e) {
             return ResponseEntity
                     .badRequest()
@@ -55,12 +52,10 @@ public class AuthController {
                     request.getEmail(),
                     request.getPassword()
             );
-
-            return ResponseEntity.ok(
-                    Map.of("token", token)
-            );
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
+            return ResponseEntity.ok(Map.of("token", token));
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(401)
                     .body(Map.of("message", e.getMessage()));
         }
     }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 const Login = () => {
   const { login } = useAuth();
@@ -10,7 +11,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅ Added state for password visibility
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,37 +24,47 @@ const Login = () => {
       return;
     }
 
-    const result = await login(email, password);
-
-    if (!result.success) {
-      setError(result.message);
-      setLoading(false);
-      return;
-    }
-
-    // ✅ CRITICAL: After successful login, ensure userProfile is saved
     try {
-      // Get the token from localStorage
-      const token = localStorage.getItem("token");
-      if (token) {
-        // Decode the token to get user info
-        const payload = JSON.parse(atob(token.split(".")[1]));
+      const result = await login(email, password);
 
-        // ✅ Save userProfile to localStorage (this is what ProfileTab.js expects)
-        localStorage.setItem("userProfile", JSON.stringify({
-          name: payload.name || email.split("@")[0],
-          email: payload.email || email,
-          avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-          joined: new Date().toLocaleDateString()
-        }));
+      if (!result.success) {
+        const msg =
+            result.response?.data?.message ||
+            result.message ||
+            "Invalid email or password";
+        setError(msg);
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error("Error saving user profile:", err);
-      // Even if profile saving fails, still navigate to profile
-    }
 
-    // ✅ Successful login - navigate to profile
-    navigate("/profile");
+      // ✅ CRITICAL: After successful login, ensure userProfile is saved
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+
+          localStorage.setItem("userProfile", JSON.stringify({
+            name: payload.name || email.split("@")[0],
+            email: payload.email || email,
+            avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
+            joined: new Date().toLocaleDateString()
+          }));
+        }
+      } catch (err) {
+        console.error("Error saving user profile:", err);
+      }
+
+      // ✅ Successful login - navigate to profile
+      navigate("/profile");
+    } catch (err) {
+      const msg =
+          err.response?.data?.message ||
+          "Invalid email or password";
+      setError(msg);
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,7 +91,6 @@ const Login = () => {
                 />
               </div>
 
-              {/* ✅ UPDATED: Password input with show/hide toggle */}
               <div className="relative">
                 <input
                     type={showPassword ? "text" : "password"}
@@ -103,7 +113,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* ✅ ADDED: Forgot password link */}
             <div className="text-right">
               <button
                   type="button"
@@ -144,7 +153,6 @@ const Login = () => {
             </div>
           </form>
 
-          {/* Google login (disabled for now) */}
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
