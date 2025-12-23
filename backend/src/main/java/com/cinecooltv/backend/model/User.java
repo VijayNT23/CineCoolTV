@@ -1,9 +1,3 @@
-package com.cinecooltv.backend.model;
-
-import jakarta.persistence.*;
-import lombok.Data;
-import java.time.LocalDateTime;
-
 @Data
 @Entity
 @Table(name = "users")
@@ -31,12 +25,12 @@ public class User {
     private LocalDateTime updatedAt;
 
     @PrePersist
-    public void onCreate() {
+    void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    public void onUpdate() {
+    void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

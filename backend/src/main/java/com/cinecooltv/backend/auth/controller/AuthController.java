@@ -9,6 +9,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
+@CrossOrigin(origins = "https://cine-cool-tv.vercel.app")
 public class AuthController {
 
     private final AuthService authService;
@@ -19,72 +20,45 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
-        try {
-            authService.signup(
-                    request.getEmail(),
-                    request.getPassword()
-            );
-            return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
-        } catch (RuntimeException e) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(Map.of("message", e.getMessage()));
-        }
+        authService.signup(
+                request.getEmail(),
+                request.getPassword(),
+                request.getName()
+        );
+        return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
     }
 
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest request) {
-
-        authService.verifyOtp(
-                request.getEmail(),
-                request.getOtp()
-        );
-
-        return ResponseEntity.ok(
-                Map.of("message", "Email verified successfully")
-        );
+        authService.verifyOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(Map.of("message", "Email verified"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            String token = authService.login(
-                    request.getEmail(),
-                    request.getPassword()
-            );
-            return ResponseEntity.ok(Map.of("token", token));
-        } catch (RuntimeException e) {
-            return ResponseEntity
-                    .status(401)
-                    .body(Map.of("message", e.getMessage()));
-        }
+        String token = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(
-            @RequestBody ForgotPasswordRequest request
-    ) {
-
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.getEmail());
-
-        return ResponseEntity.ok(
-                Map.of("message", "OTP sent to email")
-        );
+        return ResponseEntity.ok(Map.of("message", "OTP sent"));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(
-            @RequestBody ResetPasswordRequest request
-    ) {
-
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         authService.resetPassword(
                 request.getEmail(),
                 request.getOtp(),
                 request.getNewPassword()
         );
+        return ResponseEntity.ok(Map.of("message", "Password updated"));
+    }
 
-        return ResponseEntity.ok(
-                Map.of("message", "Password updated successfully")
-        );
+    @PostMapping("/resend-otp")
+    public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest request) {
+        authService.resendOtp(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "OTP resent"));
     }
 }
