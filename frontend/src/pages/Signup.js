@@ -34,24 +34,27 @@ const Signup = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/signup`, {
-        email,
-        password,
-        name,
-      });
+      const response = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/signup`,
+          {
+            email,
+            password,
+            name,
+          }
+      );
 
-      // ✅ SUCCESS - No need to check status, Axios wouldn't throw if not 2xx
       setMessage("OTP sent to your email. Please verify to complete registration.");
       setStep(2);
-
     } catch (err) {
-      // ✅ SHOW BACKEND MESSAGE PROPERLY
-      const msg =
-          err.response?.data?.message ||
-          "Registration failed. Please try again.";
-      setError(msg);
-      console.error("Signup error:", err);
+      const backendMsg = err.response?.data?.message;
 
+      if (backendMsg) {
+        setError(backendMsg); // <-- show backend message
+      } else {
+        setError("Registration failed. Please try again.");
+      }
+
+      console.error("Signup error:", err);
     } finally {
       setLoading(false);
     }
@@ -63,25 +66,53 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/verify-otp`, {
-        email,
-        otp,
-      });
+      const response = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/verify-otp`,
+          {
+            email,
+            otp,
+          }
+      );
 
-      // ✅ SUCCESS
       setMessage("Account verified successfully! Redirecting to login...");
       setTimeout(() => {
         navigate("/login");
       }, 2000);
-
     } catch (err) {
-      // ✅ SHOW BACKEND MESSAGE PROPERLY
-      const msg =
-          err.response?.data?.message ||
-          "OTP verification failed. Please try again.";
-      setError(msg);
-      console.error("OTP verification error:", err);
+      const backendMsg = err.response?.data?.message;
 
+      if (backendMsg) {
+        setError(backendMsg); // <-- show backend message
+      } else {
+        setError("OTP verification failed. Please try again.");
+      }
+
+      console.error("OTP verification error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const response = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/resend-otp`,
+          { email }
+      );
+      setMessage("New OTP sent to your email.");
+    } catch (err) {
+      const backendMsg = err.response?.data?.message;
+
+      if (backendMsg) {
+        setError(backendMsg);
+      } else {
+        setError("Failed to resend OTP. Please try again.");
+      }
+      console.error("Resend OTP error:", err);
     } finally {
       setLoading(false);
     }
@@ -225,20 +256,36 @@ const Signup = () => {
                       disabled={loading}
                       className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                           loading
-                              ? 'bg-blue-400 cursor-not-allowed'
-                              : 'bg-blue-600 hover:bg-blue-700'
+                              ? "bg-blue-400 cursor-not-allowed"
+                              : "bg-blue-600 hover:bg-blue-700"
                       }`}
                   >
                     {loading ? (
                         <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                          >
+                            <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                            ></circle>
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Creating account...
                         </>
                     ) : (
-                        'Sign up'
+                        "Sign up"
                     )}
                   </button>
                 </div>
@@ -247,7 +294,8 @@ const Signup = () => {
               <form className="mt-8 space-y-6" onSubmit={handleOtpVerification}>
                 <div>
                   <p className="text-sm text-gray-600 mb-4">
-                    We've sent a 6-digit OTP to <strong>{email}</strong>. Please enter it below to verify your account.
+                    We've sent a 6-digit OTP to <strong>{email}</strong>. Please
+                    enter it below to verify your account.
                   </p>
                   <div>
                     <label htmlFor="otp" className="sr-only">
@@ -264,7 +312,9 @@ const Signup = () => {
                         className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center text-2xl tracking-widest"
                         placeholder="000000"
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onChange={(e) =>
+                            setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                        }
                         disabled={loading}
                     />
                   </div>
@@ -276,28 +326,42 @@ const Signup = () => {
                       disabled={loading}
                       className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
                           loading
-                              ? 'bg-green-400 cursor-not-allowed'
-                              : 'bg-green-600 hover:bg-green-700'
+                              ? "bg-green-400 cursor-not-allowed"
+                              : "bg-green-600 hover:bg-green-700"
                       }`}
                   >
                     {loading ? (
                         <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                          >
+                            <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                            ></circle>
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Verifying...
                         </>
                     ) : (
-                        'Verify OTP'
+                        "Verify OTP"
                     )}
                   </button>
 
                   <button
                       type="button"
-                      onClick={() => {
-                        handleSignup({ preventDefault: () => {} });
-                      }}
+                      onClick={handleResendOtp}
                       disabled={loading}
                       className="text-sm text-blue-600 hover:text-blue-500"
                   >
@@ -321,7 +385,9 @@ const Signup = () => {
           )}
 
           <div className="text-sm text-gray-600 mt-4">
-            <p>By signing up, you agree to our Terms of Service and Privacy Policy.</p>
+            <p>
+              By signing up, you agree to our Terms of Service and Privacy Policy.
+            </p>
           </div>
         </div>
       </div>
