@@ -5,21 +5,29 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
 @Service
 public class JwtService {
 
-    private final Key key;
+    private final SecretKey key;
     private final long expiration;
 
     public JwtService(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expiration
     ) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be at least 32 characters long"
+            );
+        }
+
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
 
@@ -27,7 +35,6 @@ public class JwtService {
     // 🔐 GENERATE TOKEN
     // =========================
     public String generateToken(String email) {
-
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
@@ -59,15 +66,13 @@ public class JwtService {
     // 🔍 GENERIC CLAIM EXTRACTION
     // =========================
     private <T> T extractClaim(String token, Function<Claims, T> resolver) {
-        final Claims claims = extractAllClaims(token);
-        return resolver.apply(claims);
+        return resolver.apply(extractAllClaims(token));
     }
 
     // =========================
     // 📦 PARSE JWT
     // =========================
     private Claims extractAllClaims(String token) {
-
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
