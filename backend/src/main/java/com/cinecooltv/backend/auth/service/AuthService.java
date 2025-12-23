@@ -1,170 +1,188 @@
-package com.cinecooltv.backend.auth.service;
+package com.cinecooltv.backend.auth;
 
-import com.cinecooltv.backend.model.User;
-import com.cinecooltv.backend.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
-import java.util.Optional;
+import com.cinecooltv.backend.auth.service.AuthService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@Service
-public class AuthService {
+import java.util.HashMap;
+import java.util.Map;
 
-    private final UserRepository userRepo;
-    private final OtpService otpService;
-    private final EmailService emailService;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
 
-    public AuthService(
-            UserRepository userRepo,
-            OtpService otpService,
-            EmailService emailService,
-            PasswordEncoder passwordEncoder,
-            JwtService jwtService
-    ) {
-        this.userRepo = userRepo;
-        this.otpService = otpService;
-        this.emailService = emailService;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
     // =========================
-    // ✅ SIGNUP
+    // ✅ SIGNUP ENDPOINT
     // =========================
-    public void signup(String email, String password, String name) {
-        // Check if user already exists
-        Optional<User> existingUser = userRepo.findByEmail(email);
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+        try {
+            authService.signup(request.getEmail(), request.getPassword(), request.getName());
 
-        if (existingUser.isPresent()) {
-            User user = existingUser.get();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OTP sent to your email. Please verify to complete registration.");
+            return ResponseEntity.ok(response);
 
-            // If user exists but is not verified, resend OTP
-            if (!user.isVerified()) {
-                String otp = otpService.generateOtp(email);
-                emailService.sendOtp(email, otp);
-                return;
-            } else {
-                throw new RuntimeException("Email already registered. Please login.");
-            }
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
-        // Create new user
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setName(name);
-        user.setVerified(false);
-        user.setCreatedAt(LocalDateTime.now());
-
-        userRepo.save(user);
-
-        // Generate and send OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
     }
 
     // =========================
-    // ✅ VERIFY OTP (SIGNUP)
+    // ✅ VERIFY OTP ENDPOINT
     // =========================
-    public void verifyOtp(String email, String otp) {
-        // Verify OTP
-        if (!otpService.verifyOtp(email, otp)) {
-            throw new RuntimeException("Invalid or expired OTP");
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationRequest request) {
+        try {
+            authService.verifyOtp(request.getEmail(), request.getOtp());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Account verified successfully!");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
-        // Find user and mark as verified
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setVerified(true);
-        user.setVerifiedAt(LocalDateTime.now());
-        userRepo.save(user);
     }
 
     // =========================
-    // ✅ LOGIN + JWT
+    // ✅ LOGIN ENDPOINT
     // =========================
-    public String login(String email, String password) {
-        // Find user
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        try {
+            String token = authService.login(request.getEmail(), request.getPassword());
 
-        // Check if account is verified
-        if (!user.isVerified()) {
-            throw new RuntimeException("Please verify your email first");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Login successful");
+            response.put("token", token);
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
+    }
 
-        // Verify password
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+    // =========================
+    // 🔁 FORGOT PASSWORD ENDPOINT
+    // =========================
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            authService.forgotPassword(request.getEmail());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OTP sent to your email for password reset.");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
-        // Update last login
-        user.setLastLogin(LocalDateTime.now());
-        userRepo.save(user);
-
-        // Generate JWT token
-        return jwtService.generateToken(email);
     }
 
     // =========================
-    // 🔁 FORGOT PASSWORD (SEND OTP)
+    // 🔐 RESET PASSWORD ENDPOINT
     // =========================
-    public void forgotPassword(String email) {
-        // Find user
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
 
-        // Generate and send OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
-    }
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Password reset successfully. Please login with your new password.");
+            return ResponseEntity.ok(response);
 
-    // =========================
-    // 🔐 RESET PASSWORD
-    // =========================
-    public void resetPassword(String email, String otp, String newPassword) {
-        // Verify OTP
-        if (!otpService.verifyOtp(email, otp)) {
-            throw new RuntimeException("Invalid or expired OTP");
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
-
-        // Find user and update password
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepo.save(user);
     }
 
     // =========================
-    // 🔄 RESEND OTP
+    // 🔄 RESEND OTP ENDPOINT
     // =========================
-    public void resendOtp(String email) {
-        // Check if user exists
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @PostMapping("/resend-otp")
+    public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest request) {
+        try {
+            authService.resendOtp(request.getEmail());
 
-        // Generate new OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "New OTP sent to your email.");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     // =========================
-    // 📧 CHECK EMAIL AVAILABILITY
+    // 📧 CHECK EMAIL AVAILABILITY ENDPOINT
     // =========================
-    public boolean checkEmailAvailability(String email) {
-        return userRepo.findByEmail(email).isEmpty();
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
+        boolean isAvailable = authService.checkEmailAvailability(email);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("available", isAvailable);
+        response.put("message", isAvailable ? "Email is available" : "Email already registered");
+        return ResponseEntity.ok(response);
     }
 
     // =========================
-    // 👤 GET USER PROFILE
+    // REQUEST BODIES (INNER CLASSES)
     // =========================
-    public User getUserProfile(String email) {
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+
+    @Data
+    public static class SignupRequest {
+        private String email;
+        private String password;
+        private String name;
+    }
+
+    @Data
+    public static class OtpVerificationRequest {
+        private String email;
+        private String otp;
+    }
+
+    @Data
+    public static class LoginRequest {
+        private String email;
+        private String password;
+    }
+
+    @Data
+    public static class ForgotPasswordRequest {
+        private String email;
+    }
+
+    @Data
+    public static class ResetPasswordRequest {
+        private String email;
+        private String otp;
+        private String newPassword;
+    }
+
+    @Data
+    public static class ResendOtpRequest {
+        private String email;
     }
 }
