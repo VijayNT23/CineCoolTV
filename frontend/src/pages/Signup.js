@@ -16,6 +16,9 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
+  // Backend API URL
+  const API_BASE_URL = process.env.REACT_APP_API_URL || "https://cinecooltv-backend.onrender.com";
+
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
@@ -32,29 +35,48 @@ const Signup = () => {
       return;
     }
 
+    if (!email.includes("@") || !email.includes(".")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.post(
-          `${process.env.REACT_APP_API_BASE_URL}/auth/signup`,
+          `${API_BASE_URL}/api/auth/signup`,
           {
             email,
             password,
             name,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
           }
       );
 
-      setMessage("OTP sent to your email. Please verify to complete registration.");
+      setMessage(response.data.message || "OTP sent to your email. Please verify to complete registration.");
       setStep(2);
     } catch (err) {
-      const backendMsg = err.response?.data?.message;
+      console.error("Signup error details:", err);
 
-      if (backendMsg) {
-        setError(backendMsg); // <-- show backend message
+      const backendMsg = err.response?.data?.message;
+      const status = err.response?.status;
+
+      if (status === 400) {
+        setError(backendMsg || "Invalid request. Please check your information.");
+      } else if (status === 409) {
+        setError("Email already registered. Please login or use a different email.");
+      } else if (backendMsg) {
+        setError(backendMsg);
+      } else if (err.code === "ERR_NETWORK") {
+        setError("Network error. Please check your connection.");
+      } else if (err.code === "ERR_BAD_REQUEST") {
+        setError("Server error. Please try again later.");
       } else {
         setError("Registration failed. Please try again.");
       }
-
-      console.error("Signup error:", err);
     } finally {
       setLoading(false);
     }
@@ -67,27 +89,39 @@ const Signup = () => {
 
     try {
       const response = await axios.post(
-          `${process.env.REACT_APP_API_BASE_URL}/auth/verify-otp`,
+          `${API_BASE_URL}/api/auth/verify-otp`,
           {
             email,
             otp,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
           }
       );
 
       setMessage("Account verified successfully! Redirecting to login...");
+
+      // Auto-redirect to login after 2 seconds
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
       const backendMsg = err.response?.data?.message;
+      const status = err.response?.status;
 
-      if (backendMsg) {
-        setError(backendMsg); // <-- show backend message
+      if (status === 400) {
+        setError(backendMsg || "Invalid OTP. Please check and try again.");
+      } else if (status === 404) {
+        setError("User not found. Please sign up again.");
+      } else if (backendMsg) {
+        setError(backendMsg);
+      } else if (err.code === "ERR_NETWORK") {
+        setError("Network error. Please check your connection.");
       } else {
         setError("OTP verification failed. Please try again.");
       }
-
-      console.error("OTP verification error:", err);
     } finally {
       setLoading(false);
     }
@@ -100,8 +134,13 @@ const Signup = () => {
 
     try {
       const response = await axios.post(
-          `${process.env.REACT_APP_API_BASE_URL}/auth/resend-otp`,
-          { email }
+          `${API_BASE_URL}/api/auth/resend-otp`,
+          { email },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
       );
       setMessage("New OTP sent to your email.");
     } catch (err) {
@@ -112,58 +151,71 @@ const Signup = () => {
       } else {
         setError("Failed to resend OTP. Please try again.");
       }
-      console.error("Resend OTP error:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  const checkEmailAvailability = async (email) => {
+    if (!email.includes("@") || !email.includes(".")) return;
+
+    try {
+      const response = await axios.get(
+          `${API_BASE_URL}/api/auth/check-email?email=${email}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+      );
+
+      if (!response.data.available) {
+        setError("Email already registered. Please login.");
+      }
+    } catch (err) {
+      // Silently fail - this is just a convenience check
+    }
+  };
+
   return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              {step === 1 ? "Create your account" : "Verify your email"}
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700">
+          <div className="text-center">
+            <h2 className="mt-6 text-3xl font-bold text-white">
+              {step === 1 ? "Join CineCoolTV" : "Verify Your Email"}
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              {step === 1 ? "Already have an account? " : "Enter the OTP sent to your email "}
-              {step === 1 ? (
-                  <button
-                      onClick={() => navigate("/login")}
-                      className="font-medium text-blue-600 hover:text-blue-500"
-                      disabled={loading}
-                  >
-                    Sign in
-                  </button>
-              ) : null}
+            <p className="mt-2 text-sm text-gray-400">
+              {step === 1 ? "Create your free account to get started" : "Enter the OTP sent to your email"}
             </p>
           </div>
 
           {message && (
-              <div className="rounded-md bg-green-50 p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-green-800">{message}</p>
-                  </div>
+              <div className="rounded-lg bg-green-900/30 border border-green-800 p-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-300">{message}</p>
                 </div>
               </div>
           )}
 
           {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </div>
+              <div className="rounded-lg bg-red-900/30 border border-red-800 p-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm font-medium text-red-300">{error}</p>
                 </div>
               </div>
           )}
 
           {step === 1 ? (
               <form className="mt-8 space-y-6" onSubmit={handleSignup}>
-                <div className="rounded-md shadow-sm -space-y-px">
+                <div className="space-y-4">
                   <div>
-                    <label htmlFor="name" className="sr-only">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
                       Full Name
                     </label>
                     <input
@@ -171,17 +223,18 @@ const Signup = () => {
                         name="name"
                         type="text"
                         required
-                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                        placeholder="Full Name"
+                        className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        placeholder="Enter your full name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         disabled={loading}
                         autoComplete="name"
                     />
                   </div>
+
                   <div>
-                    <label htmlFor="email" className="sr-only">
-                      Email address
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                      Email Address
                     </label>
                     <input
                         id="email"
@@ -189,64 +242,92 @@ const Signup = () => {
                         type="email"
                         autoComplete="email"
                         required
-                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                        placeholder="Email address"
+                        className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        placeholder="you@example.com"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (e.target.value.length > 5) {
+                            checkEmailAvailability(e.target.value);
+                          }
+                        }}
                         disabled={loading}
                     />
                   </div>
 
-                  <div className="relative">
-                    <label htmlFor="password" className="sr-only">
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
                       Password
                     </label>
-                    <input
-                        id="password"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm pr-10"
-                        placeholder="Password (min. 6 characters)"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                        autoComplete="new-password"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                        disabled={loading}
-                    >
-                      {showPassword ? "🙈" : "👁️"}
-                    </button>
+                    <div className="relative">
+                      <input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm pr-12"
+                          placeholder="At least 6 characters"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={loading}
+                          autoComplete="new-password"
+                      />
+                      <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                          disabled={loading}
+                      >
+                        {showPassword ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        )}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">Minimum 6 characters</p>
                   </div>
 
-                  <div className="relative">
-                    <label htmlFor="confirm-password" className="sr-only">
+                  <div>
+                    <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-300 mb-1">
                       Confirm Password
                     </label>
-                    <input
-                        id="confirm-password"
-                        name="confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        required
-                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm pr-10"
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={loading}
-                        autoComplete="new-password"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                        disabled={loading}
-                    >
-                      {showConfirmPassword ? "🙈" : "👁️"}
-                    </button>
+                    <div className="relative">
+                      <input
+                          id="confirm-password"
+                          name="confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          required
+                          className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm pr-12"
+                          placeholder="Confirm your password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          disabled={loading}
+                          autoComplete="new-password"
+                      />
+                      <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                          disabled={loading}
+                      >
+                        {showConfirmPassword ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -254,10 +335,10 @@ const Signup = () => {
                   <button
                       type="submit"
                       disabled={loading}
-                      className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${
                           loading
-                              ? "bg-blue-400 cursor-not-allowed"
-                              : "bg-blue-600 hover:bg-blue-700"
+                              ? "bg-blue-700 cursor-not-allowed"
+                              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl"
                       }`}
                   >
                     {loading ? (
@@ -282,24 +363,39 @@ const Signup = () => {
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          Creating account...
+                          Creating Account...
                         </>
                     ) : (
-                        "Sign up"
+                        "Create Account"
                     )}
                   </button>
+                </div>
+
+                <div className="text-center mt-4">
+                  <p className="text-sm text-gray-400">
+                    Already have an account?{" "}
+                    <button
+                        type="button"
+                        onClick={() => navigate("/login")}
+                        className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                        disabled={loading}
+                    >
+                      Sign in
+                    </button>
+                  </p>
                 </div>
               </form>
           ) : (
               <form className="mt-8 space-y-6" onSubmit={handleOtpVerification}>
                 <div>
-                  <p className="text-sm text-gray-600 mb-4">
-                    We've sent a 6-digit OTP to <strong>{email}</strong>. Please
-                    enter it below to verify your account.
+                  <p className="text-sm text-gray-300 mb-6">
+                    We've sent a 6-digit OTP to <strong className="text-white">{email}</strong>.
+                    Please enter it below to verify your account.
                   </p>
-                  <div>
-                    <label htmlFor="otp" className="sr-only">
-                      OTP
+
+                  <div className="mb-8">
+                    <label htmlFor="otp" className="block text-sm font-medium text-gray-300 mb-2">
+                      Enter OTP
                     </label>
                     <input
                         id="otp"
@@ -309,7 +405,7 @@ const Signup = () => {
                         pattern="[0-9]{6}"
                         maxLength="6"
                         required
-                        className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center text-2xl tracking-widest"
+                        className="w-full px-4 py-4 text-3xl font-bold text-center tracking-[1em] bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="000000"
                         value={otp}
                         onChange={(e) =>
@@ -317,17 +413,18 @@ const Signup = () => {
                         }
                         disabled={loading}
                     />
+                    <p className="mt-2 text-xs text-gray-400 text-center">Enter the 6-digit code from your email</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col space-y-4">
                   <button
                       type="submit"
-                      disabled={loading}
-                      className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
-                          loading
-                              ? "bg-green-400 cursor-not-allowed"
-                              : "bg-green-600 hover:bg-green-700"
+                      disabled={loading || otp.length !== 6}
+                      className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 ${
+                          loading || otp.length !== 6
+                              ? "bg-green-800 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
                       }`}
                   >
                     {loading ? (
@@ -359,34 +456,43 @@ const Signup = () => {
                     )}
                   </button>
 
-                  <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={loading}
-                      className="text-sm text-blue-600 hover:text-blue-500"
-                  >
-                    Resend OTP
-                  </button>
+                  <div className="flex justify-between">
+                    <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={loading}
+                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Resend OTP
+                    </button>
 
-                  <button
-                      type="button"
-                      onClick={() => {
-                        setStep(1);
-                        setError("");
-                        setMessage("");
-                      }}
-                      disabled={loading}
-                      className="text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    Go back
-                  </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                          setStep(1);
+                          setError("");
+                          setMessage("");
+                          setOtp("");
+                        }}
+                        disabled={loading}
+                        className="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      ← Go Back
+                    </button>
+                  </div>
                 </div>
               </form>
           )}
 
-          <div className="text-sm text-gray-600 mt-4">
-            <p>
-              By signing up, you agree to our Terms of Service and Privacy Policy.
+          <div className="mt-8 pt-6 border-t border-gray-700">
+            <p className="text-xs text-gray-500 text-center">
+              By signing up, you agree to our{" "}
+              <button className="text-gray-400 hover:text-white transition-colors">Terms of Service</button>{" "}
+              and{" "}
+              <button className="text-gray-400 hover:text-white transition-colors">Privacy Policy</button>
             </p>
           </div>
         </div>

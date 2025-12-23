@@ -1,44 +1,59 @@
 package com.cinecooltv.backend.auth.service;
 
-import com.cinecooltv.backend.model.OtpVerification;
-import com.cinecooltv.backend.repository.OtpRepository;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class OtpService {
 
-    private final OtpRepository otpRepository;
+    private final Map<String, OtpData> otpStore = new HashMap<>();
 
-    public OtpService(OtpRepository otpRepository) {
-        this.otpRepository = otpRepository;
+    private static class OtpData {
+        String otp;
+        LocalDateTime expiryTime;
+
+        OtpData(String otp, LocalDateTime expiryTime) {
+            this.otp = otp;
+            this.expiryTime = expiryTime;
+        }
     }
 
     public String generateOtp(String email) {
-        String otp = String.valueOf(new Random().nextInt(900000) + 100000);
+        Random random = new Random();
+        String otp = String.format("%06d", random.nextInt(999999));
 
-        OtpVerification entity = new OtpVerification();
-        entity.setEmail(email);
-        entity.setOtp(otp);
-        entity.setExpiryTime(LocalDateTime.now().plusMinutes(5));
+        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(5);
+        otpStore.put(email, new OtpData(otp, expiryTime));
 
-        otpRepository.save(entity);
         return otp;
     }
 
     public boolean verifyOtp(String email, String otp) {
-        OtpVerification data = otpRepository
-                .findTopByEmailOrderByExpiryTimeDesc(email)
-                .orElseThrow();
+        OtpData otpData = otpStore.get(email);
 
-        if (data.isUsed()) return false;
-        if (data.getExpiryTime().isBefore(LocalDateTime.now())) return false;
-        if (!data.getOtp().equals(otp)) return false;
+        if (otpData == null) {
+            return false;
+        }
 
-        data.setUsed(true);
-        otpRepository.save(data);
-        return true;
+        if (LocalDateTime.now().isAfter(otpData.expiryTime)) {
+            otpStore.remove(email);
+            return false;
+        }
+
+        boolean isValid = otpData.otp.equals(otp);
+
+        if (isValid) {
+            otpStore.remove(email);
+        }
+
+        return isValid;
+    }
+
+    public void clearOtp(String email) {
+        otpStore.remove(email);
     }
 }

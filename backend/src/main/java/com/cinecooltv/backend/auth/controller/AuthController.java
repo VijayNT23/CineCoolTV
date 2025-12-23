@@ -11,7 +11,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"https://cine-cool-tv.vercel.app", "http://localhost:3000"},
+        allowedHeaders = "*",
+        allowCredentials = "true")
 public class AuthController {
 
     private final AuthService authService;
@@ -20,9 +22,6 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // =========================
-    // ✅ SIGNUP ENDPOINT
-    // =========================
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
         try {
@@ -39,9 +38,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // ✅ VERIFY OTP ENDPOINT
-    // =========================
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationRequest request) {
         try {
@@ -58,9 +54,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // ✅ LOGIN ENDPOINT
-    // =========================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
@@ -69,6 +62,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Login successful");
             response.put("token", token);
+            response.put("email", request.getEmail());
             return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
@@ -78,9 +72,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // 🔁 FORGOT PASSWORD ENDPOINT
-    // =========================
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         try {
@@ -97,9 +88,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // 🔐 RESET PASSWORD ENDPOINT
-    // =========================
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
@@ -116,9 +104,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // 🔄 RESEND OTP ENDPOINT
-    // =========================
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest request) {
         try {
@@ -135,9 +120,6 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // 📧 CHECK EMAIL AVAILABILITY ENDPOINT
-    // =========================
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
         try {
