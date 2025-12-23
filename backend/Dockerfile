@@ -1,20 +1,15 @@
-FROM eclipse-temurin:17-jdk
-
-# Install Maven
-RUN apt-get update && apt-get install -y maven
+FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-# Copy pom first for caching
+# Copy pom first (cache dependencies)
 COPY pom.xml .
-
-# Download dependencies
 RUN mvn dependency:go-offline
 
 # Copy source
 COPY src src
 
-# Build app
+# Build
 RUN mvn clean package -DskipTests
 
 EXPOSE 8080
