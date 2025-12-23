@@ -56,7 +56,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(password));
         user.setName(name);
         user.setVerified(false);
-        user.setCreatedAt(LocalDateTime.now());
 
         userRepo.save(user);
 
@@ -136,7 +135,6 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(LocalDateTime.now());
         userRepo.save(user);
     }
 
@@ -157,7 +155,12 @@ public class AuthService {
     // 📧 CHECK EMAIL AVAILABILITY
     // =========================
     public boolean checkEmailAvailability(String email) {
-        return userRepo.findByEmail(email).isEmpty();
+        Optional<User> user = userRepo.findByEmail(email);
+        if (user.isPresent()) {
+            // Return true only if user exists but is not verified (can resend OTP)
+            return !user.get().isVerified();
+        }
+        return true; // Email doesn't exist at all
     }
 
     // =========================

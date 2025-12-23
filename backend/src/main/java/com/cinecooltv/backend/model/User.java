@@ -22,21 +22,28 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "is_verified", nullable = false)
     private boolean verified = false;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
+
+    @Column(name = "last_login")
     private LocalDateTime lastLogin;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
-    void onCreate() {
+    protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
     @PreUpdate
-    void onUpdate() {
+    protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

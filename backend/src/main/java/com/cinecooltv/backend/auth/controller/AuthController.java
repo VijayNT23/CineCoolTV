@@ -1,6 +1,7 @@
-package com.cinecooltv.backend.auth;
+package com.cinecooltv.backend.auth.controller;
 
 import com.cinecooltv.backend.auth.service.AuthService;
+import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthService authService;
@@ -64,7 +66,7 @@ public class AuthController {
         try {
             String token = authService.login(request.getEmail(), request.getPassword());
 
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("message", "Login successful");
             response.put("token", token);
             return ResponseEntity.ok(response);
@@ -138,12 +140,19 @@ public class AuthController {
     // =========================
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
-        boolean isAvailable = authService.checkEmailAvailability(email);
+        try {
+            boolean isAvailable = authService.checkEmailAvailability(email);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("available", isAvailable);
-        response.put("message", isAvailable ? "Email is available" : "Email already registered");
-        return ResponseEntity.ok(response);
+            Map<String, Object> response = new HashMap<>();
+            response.put("available", isAvailable);
+            response.put("message", isAvailable ? "Email is available" : "Email already registered");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     // =========================
