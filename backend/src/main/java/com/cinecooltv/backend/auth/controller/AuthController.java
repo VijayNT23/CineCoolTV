@@ -1,8 +1,6 @@
 package com.cinecooltv.backend.auth.controller;
 
-import com.cinecooltv.backend.auth.dto.LoginRequest;
-import com.cinecooltv.backend.auth.dto.SignupRequest;
-import com.cinecooltv.backend.auth.dto.OtpVerificationRequest;
+import com.cinecooltv.backend.auth.dto.*;
 import com.cinecooltv.backend.auth.service.AuthService;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
@@ -147,10 +145,4 @@ public class AuthController {
         }
     }
 
-    @Data
-    private static class ResetPasswordRequest {
-        private String email;
-        private String otp;
-        private String newPassword;
-    }
 }
