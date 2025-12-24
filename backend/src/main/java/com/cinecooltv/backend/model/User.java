@@ -17,17 +17,13 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "username", nullable = false)  // Try different column names
-    // OR
-    // @Column(name = "full_name", nullable = false)
-    // OR
-    // @Column(nullable = false)  // Remove @Column and let JPA use field name
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
     @Column(name = "is_verified", nullable = false)
