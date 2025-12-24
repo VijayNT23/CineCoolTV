@@ -45,7 +45,8 @@ public class SecurityConfig {
                                 "/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/error",
+                                "/**"  // Add this to allow all for debugging
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -85,7 +86,7 @@ public class SecurityConfig {
                 "http://localhost:3000"
         ));
 
-        // Allow all common HTTP methods
+        // Allow all common HTTP methods including OPTIONS for preflight
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
         ));
@@ -94,13 +95,14 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin",
                 "Access-Control-Request-Method", "Access-Control-Request-Headers",
-                "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"
+                "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials",
+                "X-API-KEY", "X-CSRF-TOKEN"
         ));
 
         // Expose headers
         configuration.setExposedHeaders(Arrays.asList(
                 "Authorization", "Content-Type", "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials"
+                "Access-Control-Allow-Credentials", "Access-Control-Allow-Headers"
         ));
 
         // Allow credentials (cookies, authorization headers)

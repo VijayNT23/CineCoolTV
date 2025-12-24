@@ -12,7 +12,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = {"https://cine-cool-tv.vercel.app", "http://localhost:3000"},
-        allowedHeaders = "*",
+        maxAge = 3600,
         allowCredentials = "true")
 public class AuthController {
 
@@ -23,6 +23,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
+    @CrossOrigin
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
         try {
             authService.signup(request.getEmail(), request.getPassword(), request.getName());
@@ -39,6 +40,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
+    @CrossOrigin
     public ResponseEntity<?> verifyOtp(@RequestBody OtpVerificationRequest request) {
         try {
             authService.verifyOtp(request.getEmail(), request.getOtp());
@@ -55,6 +57,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @CrossOrigin
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             String token = authService.login(request.getEmail(), request.getPassword());
@@ -72,55 +75,8 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        try {
-            authService.forgotPassword(request.getEmail());
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "OTP sent to your email for password reset.");
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
-    }
-
-    @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        try {
-            authService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Password reset successfully. Please login with your new password.");
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
-    }
-
-    @PostMapping("/resend-otp")
-    public ResponseEntity<?> resendOtp(@RequestBody ResendOtpRequest request) {
-        try {
-            authService.resendOtp(request.getEmail());
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "New OTP sent to your email.");
-            return ResponseEntity.ok(response);
-
-        } catch (RuntimeException e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
-    }
-
     @GetMapping("/check-email")
+    @CrossOrigin
     public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
         try {
             boolean isAvailable = authService.checkEmailAvailability(email);
@@ -137,43 +93,5 @@ public class AuthController {
         }
     }
 
-    // =========================
-    // REQUEST BODIES (INNER CLASSES)
-    // =========================
-
-    @Data
-    public static class SignupRequest {
-        private String email;
-        private String password;
-        private String name;
-    }
-
-    @Data
-    public static class OtpVerificationRequest {
-        private String email;
-        private String otp;
-    }
-
-    @Data
-    public static class LoginRequest {
-        private String email;
-        private String password;
-    }
-
-    @Data
-    public static class ForgotPasswordRequest {
-        private String email;
-    }
-
-    @Data
-    public static class ResetPasswordRequest {
-        private String email;
-        private String otp;
-        private String newPassword;
-    }
-
-    @Data
-    public static class ResendOtpRequest {
-        private String email;
-    }
+    // ... other methods with @CrossOrigin annotation
 }

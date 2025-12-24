@@ -40,6 +40,11 @@ const Signup = () => {
       return;
     }
 
+    if (name.trim().length < 2) {
+      setError("Please enter your full name");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await axios.post(
@@ -71,9 +76,11 @@ const Signup = () => {
       } else if (backendMsg) {
         setError(backendMsg);
       } else if (err.code === "ERR_NETWORK") {
-        setError("Network error. Please check your connection.");
+        setError("Network error. Please check your connection and try again.");
       } else if (err.code === "ERR_BAD_REQUEST") {
         setError("Server error. Please try again later.");
+      } else if (err.message?.includes("CORS")) {
+        setError("Connection issue. Please refresh the page or try again later.");
       } else {
         setError("Registration failed. Please try again.");
       }
@@ -86,6 +93,12 @@ const Signup = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    if (otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await axios.post(
@@ -119,6 +132,8 @@ const Signup = () => {
         setError(backendMsg);
       } else if (err.code === "ERR_NETWORK") {
         setError("Network error. Please check your connection.");
+      } else if (err.message?.includes("CORS")) {
+        setError("Connection issue. Please refresh the page and try again.");
       } else {
         setError("OTP verification failed. Please try again.");
       }
@@ -142,12 +157,14 @@ const Signup = () => {
             },
           }
       );
-      setMessage("New OTP sent to your email.");
+      setMessage("New OTP sent to your email. Please check your inbox.");
     } catch (err) {
       const backendMsg = err.response?.data?.message;
 
       if (backendMsg) {
         setError(backendMsg);
+      } else if (err.code === "ERR_NETWORK") {
+        setError("Network error. Please check your connection.");
       } else {
         setError("Failed to resend OTP. Please try again.");
       }
@@ -156,26 +173,7 @@ const Signup = () => {
     }
   };
 
-  const checkEmailAvailability = async (email) => {
-    if (!email.includes("@") || !email.includes(".")) return;
-
-    try {
-      const response = await axios.get(
-          `${API_BASE_URL}/api/auth/check-email?email=${email}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-      );
-
-      if (!response.data.available) {
-        setError("Email already registered. Please login.");
-      }
-    } catch (err) {
-      // Silently fail - this is just a convenience check
-    }
-  };
+  // REMOVED: checkEmailAvailability function
 
   return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
@@ -245,12 +243,7 @@ const Signup = () => {
                         className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
                         placeholder="you@example.com"
                         value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (e.target.value.length > 5) {
-                            checkEmailAvailability(e.target.value);
-                          }
-                        }}
+                        onChange={(e) => setEmail(e.target.value)}
                         disabled={loading}
                     />
                   </div>
