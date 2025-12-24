@@ -1,5 +1,8 @@
 package com.cinecooltv.backend.auth.controller;
 
+import com.cinecooltv.backend.auth.dto.LoginRequest;
+import com.cinecooltv.backend.auth.dto.SignupRequest;
+import com.cinecooltv.backend.auth.dto.OtpVerificationRequest;
 import com.cinecooltv.backend.auth.service.AuthService;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
@@ -75,6 +78,23 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/resend-otp")
+    @CrossOrigin
+    public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
+        try {
+            authService.resendOtp(request.get("email"));
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OTP resent successfully!");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
     @GetMapping("/check-email")
     @CrossOrigin
     public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
@@ -93,5 +113,44 @@ public class AuthController {
         }
     }
 
-    // ... other methods with @CrossOrigin annotation
+    @PostMapping("/forgot-password")
+    @CrossOrigin
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        try {
+            authService.forgotPassword(request.get("email"));
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OTP sent to your email for password reset.");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/reset-password")
+    @CrossOrigin
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Password reset successful!");
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    @Data
+    private static class ResetPasswordRequest {
+        private String email;
+        private String otp;
+        private String newPassword;
+    }
 }
