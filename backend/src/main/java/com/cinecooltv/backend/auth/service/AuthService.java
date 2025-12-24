@@ -44,7 +44,7 @@ public class AuthService {
             if (!user.isVerified()) {
                 String otp = otpService.generateOtp(email);
                 emailService.sendOtp(email, otp);
-                return;
+                throw new RuntimeException("User already exists but not verified. OTP resent.");
             } else {
                 throw new RuntimeException("Email already registered. Please login.");
             }

@@ -16,13 +16,14 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${JWT_SECRET}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${JWT_EXPIRATION}")
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     private Key getSigningKey() {
+        // Use the secret key as plain text - works with your current secret
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
@@ -41,7 +42,7 @@ public class JwtService {
                 .compact();
     }
 
-    public String extractUsername(String token) {
+    public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -55,19 +56,31 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid JWT token", e);
+        }
     }
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    public Boolean validateToken(String token, String username) {
-        final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+    public Boolean isTokenValid(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public Boolean validateToken(String token, String email) {
+        final String extractedEmail = extractEmail(token);
+        return (extractedEmail.equals(email) && !isTokenExpired(token));
     }
 }
