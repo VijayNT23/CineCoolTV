@@ -1,59 +1,69 @@
 package com.cinecooltv.backend.auth.service;
 
+import com.cinecooltv.backend.model.OtpVerification;
+import com.cinecooltv.backend.model.User;
+import com.cinecooltv.backend.repository.OtpVerificationRepository;
+import com.cinecooltv.backend.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Service
 public class OtpService {
 
-    private final Map<String, OtpData> otpStore = new HashMap<>();
+    private final OtpVerificationRepository otpRepository;
+    private final UserRepository userRepository;
 
-    private static class OtpData {
-        String otp;
-        LocalDateTime expiryTime;
-
-        OtpData(String otp, LocalDateTime expiryTime) {
-            this.otp = otp;
-            this.expiryTime = expiryTime;
-        }
+    public OtpService(
+            OtpVerificationRepository otpRepository,
+            UserRepository userRepository
+    ) {
+        this.otpRepository = otpRepository;
+        this.userRepository = userRepository;
     }
 
-    public String generateOtp(String email) {
-        Random random = new Random();
-        String otp = String.format("%06d", random.nextInt(999999));
+    // ✅ CHANGE 2: CREATE OTP
+    @Transactional
+    public void createOtp(String email, String otp) {
 
-        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(5);
-        otpStore.put(email, new OtpData(otp, expiryTime));
+        OtpVerification entity = new OtpVerification();
+        entity.setEmail(email);
+        entity.setOtp(otp);
+        entity.setExpiryTime(LocalDateTime.now().plusMinutes(10));
+        entity.setUsed(false);
 
-        return otp;
+        otpRepository.save(entity);
     }
 
-    public boolean verifyOtp(String email, String otp) {
-        OtpData otpData = otpStore.get(email);
+    // ✅ CHANGE 3: VERIFY OTP
+    @Transactional
+    public void verifyOtp(String email, String otp) {
 
-        if (otpData == null) {
-            return false;
+        OtpVerification data = otpRepository
+                .findTopByEmailOrderByExpiryTimeDesc(email)
+                .orElseThrow(() -> new RuntimeException("OTP not found"));
+
+        if (data.isUsed()) {
+            throw new RuntimeException("OTP already used");
         }
 
-        if (LocalDateTime.now().isAfter(otpData.expiryTime)) {
-            otpStore.remove(email);
-            return false;
+        if (data.getExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("OTP expired");
         }
 
-        boolean isValid = otpData.otp.equals(otp);
-
-        if (isValid) {
-            otpStore.remove(email);
+        if (!data.getOtp().equals(otp)) {
+            throw new RuntimeException("Invalid OTP");
         }
 
-        return isValid;
-    }
+        data.setUsed(true);
+        otpRepository.save(data);
 
-    public void clearOtp(String email) {
-        otpStore.remove(email);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setVerified(true);
+        user.setVerifiedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 }

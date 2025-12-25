@@ -2,172 +2,129 @@ package com.cinecooltv.backend.auth.service;
 
 import com.cinecooltv.backend.model.User;
 import com.cinecooltv.backend.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepo;
-    private final OtpService otpService;
-    private final EmailService emailService;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailService emailService;
+    private final OtpService otpService;
 
     public AuthService(
-            UserRepository userRepo,
-            OtpService otpService,
-            EmailService emailService,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            EmailService emailService,
+            OtpService otpService
     ) {
-        this.userRepo = userRepo;
-        this.otpService = otpService;
-        this.emailService = emailService;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailService = emailService;
+        this.otpService = otpService;
     }
 
-    // =========================
-    // ✅ SIGNUP
-    // =========================
+    // ======================
+    // SIGNUP
+    // ======================
+    @Transactional
     public void signup(String email, String password, String name) {
-        // Check if user already exists
-        Optional<User> existingUser = userRepo.findByEmail(email);
 
-        if (existingUser.isPresent()) {
-            User user = existingUser.get();
-
-            // If user exists but is not verified, resend OTP
-            if (!user.isVerified()) {
-                String otp = otpService.generateOtp(email);
-                emailService.sendOtp(email, otp);
-                throw new RuntimeException("User already exists but not verified. OTP resent.");
-            } else {
-                throw new RuntimeException("Email already registered. Please login.");
-            }
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email already registered");
         }
 
-        // Create new user
         User user = new User();
         user.setEmail(email);
+        user.setName(name);               // 🔥 FIXED (name was NULL before)
         user.setPassword(passwordEncoder.encode(password));
-        user.setName(name);
         user.setVerified(false);
 
-        userRepo.save(user);
+        userRepository.save(user);
 
-        // Generate and send OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
+        String otp = generateOtp();
+        otpService.createOtp(email, otp);
+
+        emailService.sendOtpEmail(email, otp);
     }
 
-    // =========================
-    // ✅ VERIFY OTP (SIGNUP)
-    // =========================
+    // ======================
+    // VERIFY OTP
+    // ======================
     public void verifyOtp(String email, String otp) {
-        // Verify OTP
-        if (!otpService.verifyOtp(email, otp)) {
-            throw new RuntimeException("Invalid or expired OTP");
-        }
-
-        // Find user and mark as verified
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setVerified(true);
-        user.setVerifiedAt(LocalDateTime.now());
-        userRepo.save(user);
+        otpService.verifyOtp(email, otp);
     }
 
-    // =========================
-    // ✅ LOGIN + JWT
-    // =========================
+    // ======================
+    // LOGIN
+    // ======================
+    // ✅ CHANGE 4
     public String login(String email, String password) {
-        // Find user
-        User user = userRepo.findByEmail(email)
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
-        // Check if account is verified
-        if (!user.isVerified()) {
-            throw new RuntimeException("Please verify your email first");
-        }
-
-        // Verify password
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
         }
 
-        // Update last login
-        user.setLastLogin(LocalDateTime.now());
-        userRepo.save(user);
-
-        // Generate JWT token
-        return jwtService.generateToken(email);
-    }
-
-    // =========================
-    // 🔁 FORGOT PASSWORD (SEND OTP)
-    // =========================
-    public void forgotPassword(String email) {
-        // Find user
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Generate and send OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
-    }
-
-    // =========================
-    // 🔐 RESET PASSWORD
-    // =========================
-    public void resetPassword(String email, String otp, String newPassword) {
-        // Verify OTP
-        if (!otpService.verifyOtp(email, otp)) {
-            throw new RuntimeException("Invalid or expired OTP");
+        if (!user.isVerified()) {
+            throw new RuntimeException("Please verify your email first");
         }
 
-        // Find user and update password
-        User user = userRepo.findByEmail(email)
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+
+        return jwtService.generateToken(user.getEmail());
+    }
+
+    // ======================
+    // FORGOT PASSWORD
+    // ======================
+    public void forgotPassword(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String otp = generateOtp();
+        otpService.createOtp(email, otp);
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    // ======================
+    // RESET PASSWORD
+    // ======================
+    @Transactional
+    public void resetPassword(String email, String otp, String newPassword) {
+
+        otpService.verifyOtp(email, otp);
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));
-        userRepo.save(user);
+        userRepository.save(user);
     }
 
-    // =========================
-    // 🔄 RESEND OTP
-    // =========================
-    public void resendOtp(String email) {
-        // Check if user exists
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Generate new OTP
-        String otp = otpService.generateOtp(email);
-        emailService.sendOtp(email, otp);
-    }
-
-    // =========================
-    // 📧 CHECK EMAIL AVAILABILITY
-    // =========================
+    // ======================
+    // CHECK EMAIL
+    // ======================
     public boolean checkEmailAvailability(String email) {
-        Optional<User> user = userRepo.findByEmail(email);
-        if (user.isPresent()) {
-            // Return true only if user exists but is not verified (can resend OTP)
-            return !user.get().isVerified();
-        }
-        return true; // Email doesn't exist at all
+        return !userRepository.existsByEmail(email);
     }
 
-    // =========================
-    // 👤 GET USER PROFILE
-    // =========================
-    public User getUserProfile(String email) {
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // ======================
+    // OTP GENERATOR
+    // ======================
+    private String generateOtp() {
+        return String.valueOf(100000 + new Random().nextInt(900000));
     }
 }
