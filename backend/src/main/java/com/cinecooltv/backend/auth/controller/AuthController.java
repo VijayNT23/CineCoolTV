@@ -1,5 +1,6 @@
 package com.cinecooltv.backend.auth.controller;
 
+import com.cinecooltv.backend.auth.dto.OtpRequest;
 import com.cinecooltv.backend.auth.dto.*;
 import com.cinecooltv.backend.auth.service.AuthService;
 import org.springframework.http.HttpStatus;
