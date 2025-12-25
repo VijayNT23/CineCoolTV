@@ -64,6 +64,24 @@ public class AuthService {
     }
 
     // ======================
+    // RESEND OTP
+// ======================
+    @Transactional
+    public void resendOtp(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.isVerified()) {
+            throw new RuntimeException("Account already verified");
+        }
+
+        String otp = generateOtp();
+        otpService.createOtp(email, otp);
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    // ======================
     // LOGIN
     // ======================
     public String login(String email, String password) {

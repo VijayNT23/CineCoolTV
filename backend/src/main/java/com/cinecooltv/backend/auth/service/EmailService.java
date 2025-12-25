@@ -13,12 +13,18 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendOtp(String email, String otp) {
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(email);
-        msg.setSubject("CineCoolTV OTP Verification");
-        msg.setText("Your OTP is: " + otp + "\nValid for 5 minutes.");
+    // ✅ REQUIRED METHOD (AuthService depends on this)
+    public void sendOtpEmail(String email, String otp) {
 
-        mailSender.send(msg);
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("CineCoolTV - OTP Verification");
+        message.setText(
+                "Your OTP is: " + otp + "\n\n" +
+                        "This OTP is valid for 10 minutes.\n\n" +
+                        "If you did not request this, please ignore this email."
+        );
+
+        mailSender.send(message);
     }
 }
