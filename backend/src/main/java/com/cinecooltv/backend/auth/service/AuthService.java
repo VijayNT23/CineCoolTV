@@ -66,7 +66,6 @@ public class AuthService {
     // ======================
     // LOGIN
     // ======================
-    // ✅ CHANGE 4
     public String login(String email, String password) {
 
         User user = userRepository.findByEmail(email)
@@ -85,6 +84,7 @@ public class AuthService {
 
         return jwtService.generateToken(user.getEmail());
     }
+
 
     // ======================
     // FORGOT PASSWORD

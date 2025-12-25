@@ -2,7 +2,7 @@ package com.cinecooltv.backend.auth.service;
 
 import com.cinecooltv.backend.model.OtpVerification;
 import com.cinecooltv.backend.model.User;
-import com.cinecooltv.backend.repository.OtpVerificationRepository;
+import com.cinecooltv.backend.repository.OtpRepository;
 import com.cinecooltv.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -12,18 +12,16 @@ import java.time.LocalDateTime;
 @Service
 public class OtpService {
 
-    private final OtpVerificationRepository otpRepository;
+    private final OtpRepository otpRepository;
     private final UserRepository userRepository;
 
-    public OtpService(
-            OtpVerificationRepository otpRepository,
-            UserRepository userRepository
-    ) {
+    public OtpService(OtpRepository otpRepository,
+                      UserRepository userRepository) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
     }
 
-    // ✅ CHANGE 2: CREATE OTP
+    // ✅ CREATE OTP
     @Transactional
     public void createOtp(String email, String otp) {
 
@@ -36,7 +34,7 @@ public class OtpService {
         otpRepository.save(entity);
     }
 
-    // ✅ CHANGE 3: VERIFY OTP
+    // ✅ VERIFY OTP
     @Transactional
     public void verifyOtp(String email, String otp) {
 
