@@ -6,7 +6,7 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(""); // Changed from username to name
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1); // 1: Signup form, 2: OTP verification
   const [message, setMessage] = useState("");
@@ -50,7 +50,7 @@ const Signup = () => {
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/signup`,
           {
-            username,
+            name: name, // ✅ Changed from username to name
             email,
             password,
           },
@@ -61,8 +61,13 @@ const Signup = () => {
           }
       );
 
-      setMessage(response.data.message || "OTP sent to your email. Please verify to complete registration.");
-      setStep(2);
+      // ✅ Handle new response structure
+      if (response.data.success) {
+        setMessage(response.data.message || "OTP sent to your email. Please verify to complete registration.");
+        setStep(2);
+      } else {
+        setError(response.data.message || "Registration failed");
+      }
     } catch (err) {
       console.error("Signup error details:", err);
 
@@ -101,8 +106,9 @@ const Signup = () => {
     }
 
     try {
+      // ✅ Use correct endpoint: /verify-email instead of /verify-otp
       const response = await axios.post(
-          `${API_BASE_URL}/api/auth/verify-otp`,
+          `${API_BASE_URL}/api/auth/verify-email`,
           {
             email,
             otp,
@@ -114,12 +120,17 @@ const Signup = () => {
           }
       );
 
-      setMessage("Account verified successfully! Redirecting to login...");
+      // ✅ Handle structured response
+      if (response.data.status === "SUCCESS") {
+        setMessage("Account verified successfully! Redirecting to login...");
 
-      // Auto-redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+        // Auto-redirect to login after 2 seconds
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      } else {
+        setError(response.data.message || "OTP verification failed");
+      }
     } catch (err) {
       const backendMsg = err.response?.data?.message;
       const status = err.response?.status;
@@ -157,7 +168,13 @@ const Signup = () => {
             },
           }
       );
-      setMessage("New OTP sent to your email. Please check your inbox.");
+
+      // ✅ Handle structured response
+      if (response.data.status === "SUCCESS") {
+        setMessage("New OTP sent to your email. Please check your inbox.");
+      } else {
+        setError(response.data.message || "Failed to resend OTP");
+      }
     } catch (err) {
       const backendMsg = err.response?.data?.message;
 
@@ -173,8 +190,6 @@ const Signup = () => {
     }
   };
 
-  // REMOVED: checkEmailAvailability function
-
   return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700">
@@ -188,12 +203,26 @@ const Signup = () => {
           </div>
 
           {message && (
-              <div className="rounded-lg bg-green-900/30 border border-green-800 p-4">
+              <div className={`rounded-lg p-4 ${
+                  message.includes("successfully")
+                      ? "bg-green-900/30 border-green-800"
+                      : "bg-blue-900/30 border-blue-800"
+              }`}>
                 <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-sm font-medium text-green-300">{message}</p>
+                  {message.includes("successfully") ? (
+                      <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                  ) : (
+                      <svg className="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                  )}
+                  <p className={`text-sm font-medium ${
+                      message.includes("successfully") ? "text-green-300" : "text-blue-300"
+                  }`}>
+                    {message}
+                  </p>
                 </div>
               </div>
           )}
@@ -217,16 +246,16 @@ const Signup = () => {
                       Full Name
                     </label>
                     <input
-                        id="username"
-                        name="username"
+                        id="name"
+                        name="name"
                         type="text"
                         required
                         className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
                         placeholder="Enter your full name"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         disabled={loading}
-                        autoComplete="username"
+                        autoComplete="name"
                     />
                   </div>
 
