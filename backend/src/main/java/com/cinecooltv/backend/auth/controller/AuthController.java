@@ -26,7 +26,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
-        authService.signup(request.getEmail(), request.getPassword(), request.getName());
+        authService.signup(request.getEmail(), request.getPassword(), request.getUsername());
         return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
     }
 
