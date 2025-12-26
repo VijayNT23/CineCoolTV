@@ -40,7 +40,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",    // Auth endpoints
-                                "/health",         // Health check
+                                "/health",
+                                "/actuator/health",// Health check
                                 "/swagger-ui/**",  // Swagger UI
                                 "/v3/api-docs/**", // OpenAPI docs
                                 "/error"           // Error endpoint
