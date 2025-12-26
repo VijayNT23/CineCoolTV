@@ -38,7 +38,7 @@ public class AuthService {
 
         User user = new User();
         user.setEmail(email);
-        user.setUsername(name);
+        user.setName(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(false);
         user.setOtpVerified(false);
@@ -49,7 +49,6 @@ public class AuthService {
         // Generate OTP
         String otp = otpService.createOtp(email);
 
-        // 🔧 Fix #1: Wrap email sending in try/catch
         boolean emailSent = false;
         String message;
 

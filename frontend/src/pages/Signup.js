@@ -6,7 +6,7 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState(""); // Changed from username to name
+  const [name, setName] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1); // 1: Signup form, 2: OTP verification
   const [message, setMessage] = useState("");
@@ -50,7 +50,7 @@ const Signup = () => {
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/signup`,
           {
-            name: name, // ✅ Changed from username to name
+            name,
             email,
             password,
           },
