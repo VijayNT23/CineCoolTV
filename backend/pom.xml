@@ -107,6 +107,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Bean Validation (for @NotBlank, @Email, etc.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Devtools (local only, ignored on Render) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -156,6 +162,7 @@
                 </configuration>
             </plugin>
         </plugins>
+
     </build>
 
 </project>
