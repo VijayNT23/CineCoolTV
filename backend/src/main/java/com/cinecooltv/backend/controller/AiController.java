@@ -28,10 +28,10 @@ public class AiController {
     public ResponseEntity<Map<String, Object>> askAI(@RequestBody Map<String, Object> request) {
         System.out.println("==========================================");
         System.out.println("▶ RECEIVED AI REQUEST: " + request);
-        
+
         // 🔥🔥🔥 STEP 1: Add this line at the TOP of askAI()
         System.out.println("🔥🔥🔥 GROQ KEY LOADED: " + groqApiKey);
-        
+
         // Debug: Check if API key is loaded
         System.out.println("▶ GROQ API KEY LOADED: " + (groqApiKey != null && !groqApiKey.isEmpty() ? "YES (first 10 chars): " + groqApiKey.substring(0, Math.min(10, groqApiKey.length())) : "NO"));
 
@@ -81,7 +81,7 @@ public class AiController {
                         • Use emojis like 🎬 ⭐ 🔍 🥇 🎭 📺 💡
                         • For comparisons → provide detailed head-to-head breakdowns.
                         • For follow-up questions → continue naturally using stored memory.
-                        """));        
+                        """));
 
             // Add previous memory (excluding current question which is already added)
             for (String entry : conversationHistory) {
@@ -110,7 +110,7 @@ public class AiController {
 
             // 🔥🔥🔥 STEP 2: Add this line before sending request
             System.out.println("🔥🔥🔥 SENDING BODY TO GROQ: " + body.toString());
-            
+
             // Debug: Print the request body being sent to Groq
             System.out.println("▶ SENDING TO GROQ API:");
             System.out.println("URL: https://api.groq.com/openai/v1/chat/completions");
@@ -126,7 +126,7 @@ public class AiController {
             HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
 
             System.out.println("▶ CALLING GROQ API...");
-            
+
             // Call Groq API
             ResponseEntity<String> groqResponse = restTemplate.postForEntity(
                     "https://api.groq.com/openai/v1/chat/completions",
@@ -156,44 +156,31 @@ public class AiController {
             response.put("answer", aiResponse);
             response.put("movies", movies);
 
-            System.out.println("✅ SUCCESS! Groq Response (first 150 chars): " + 
-                aiResponse.substring(0, Math.min(150, aiResponse.length())) + "...");
+            System.out.println("✅ SUCCESS! Groq Response (first 150 chars): " +
+                    aiResponse.substring(0, Math.min(150, aiResponse.length())) + "...");
             System.out.println("✅ Movies extracted: " + movies.size());
             System.out.println("==========================================");
-            
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            // 🔥🔥🔥 STEP 3: Add these 2 lines inside catch block
+            // ✅ THE CORRECT FIX - Option 1 (BEST)
             System.out.println("🔥🔥🔥 GROQ ERROR: " + e.getMessage());
+            System.out.println("🔥🔥🔥 ERROR TYPE: " + e.getClass().getSimpleName());
             e.printStackTrace();
-            
-            System.out.println("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥");
-            System.out.println("🔥🔥🔥 GROQ API ERROR OCCURRED");
-            System.out.println("🔥🔥🔥 ERROR MESSAGE: " + e.getMessage());
-            System.out.println("🔥🔥🔥 ERROR TYPE: " + e.getClass().getUsername());
-            
-            // Print full stack trace
-            System.out.println("🔥🔥🔥 FULL STACK TRACE:");
-            e.printStackTrace();
-            
-            System.out.println("🔥🔥🔥 END OF ERROR");
-            System.out.println("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥");
 
-            // Fallback response if Groq API fails
-            String fallbackResponse = "I'm CineCoolAI! I can help you analyze movies and TV shows. " +
-                    "Based on your question: \"" + question + "\", " +
-                    "I would recommend checking out popular streaming platforms " +
-                    "and looking at audience reviews for the best insights. " +
-                    "(Note: Groq API is currently unavailable. Using fallback response.)";
-            
-            // Save fallback to memory
+            String fallbackResponse =
+                    "I'm CineCoolAI! I can help you analyze movies and TV shows. " +
+                            "Based on your question: \"" + question + "\", " +
+                            "I would recommend checking out popular streaming platforms " +
+                            "and audience reviews. (Groq API unavailable)";
+
             conversationHistory.add("AI: " + fallbackResponse);
             if (conversationHistory.size() > 10) conversationHistory.remove(0);
 
             System.out.println("⚠️ USING FALLBACK RESPONSE");
             System.out.println("==========================================");
-            
+
             return ResponseEntity.ok(Map.of(
                     "answer", fallbackResponse,
                     "movies", new ArrayList<>()
@@ -273,12 +260,12 @@ public class AiController {
     public Map<String, String> health() {
         boolean groqLoaded = groqApiKey != null && !groqApiKey.isBlank();
         boolean tmdbLoaded = tmdbKey != null && !tmdbKey.isBlank();
-        
+
         System.out.println("🔍 HEALTH CHECK:");
         System.out.println("   - Groq API Key Loaded: " + groqLoaded);
         System.out.println("   - TMDB API Key Loaded: " + tmdbLoaded);
         System.out.println("   - Active Sessions: " + conversationSessions.size());
-        
+
         return Map.of(
                 "status", "OK",
                 "groqConfigured", groqLoaded ? "YES" : "NO",
