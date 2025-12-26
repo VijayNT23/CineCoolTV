@@ -4,6 +4,8 @@ import com.cinecooltv.backend.model.User;
 import com.cinecooltv.backend.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -33,7 +35,11 @@ public class AuthService {
     // 🔧 Fix #1: Don't crash signup if email fails
     public SignupResult signup(String email, String password, String name) {
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            // ✅ CORRECT: Use ResponseStatusException
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Email already registered"
+            );
         }
 
         User user = new User();
@@ -73,7 +79,10 @@ public class AuthService {
 
         // ✅ Mark user as email-verified
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         user.setVerified(true);
         user.setOtpVerified(true);
@@ -85,15 +94,26 @@ public class AuthService {
     public String initiateLogin(String email, String password) {
         // 1️⃣ Validate email + password
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password"
+                ));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            // ✅ CORRECT: Use ResponseStatusException
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password"
+            );
         }
 
         // Check if user is verified (email verification)
         if (!user.isVerified()) {
-            throw new RuntimeException("Please verify your email first");
+            // ✅ CORRECT: Use ResponseStatusException
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email first"
+            );
         }
 
         // 2️⃣ Reset OTP verification status for this login session
@@ -120,7 +140,10 @@ public class AuthService {
 
         // 2️⃣ Get the user
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         // 3️⃣ Mark OTP as verified
         user.setOtpVerified(true);
@@ -134,7 +157,10 @@ public class AuthService {
     public String resendOtp(String email) {
         // Check if user exists
         userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         // Generate and send new OTP
         String otp = otpService.createOtp(email);
@@ -151,14 +177,23 @@ public class AuthService {
     // Direct login for testing/development (if needed)
     public String directLogin(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password"
+                ));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password"
+            );
         }
 
         if (!user.isVerified()) {
-            throw new RuntimeException("Please verify your email first");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email first"
+            );
         }
 
         user.setOtpVerified(false);
