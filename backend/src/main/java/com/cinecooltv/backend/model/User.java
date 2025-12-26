@@ -1,15 +1,15 @@
 package com.cinecooltv.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-@ToString
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "users")
 public class User {
@@ -21,37 +21,32 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "email", unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false)
+    @Column(nullable = false)
     private String password;
 
-    @Column(name = "is_verified", nullable = false)
-    private boolean verified = false;
+    @Column(nullable = false)
+    private boolean isVerified = false;
 
-    @Column(name = "otp_verified", nullable = false)
-    private boolean otpVerified = false;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
 
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    private LocalDateTime lastLogin;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = this.createdAt;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 }
