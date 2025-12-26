@@ -4,11 +4,10 @@ import com.cinecooltv.backend.model.OtpVerification;
 import com.cinecooltv.backend.model.User;
 import com.cinecooltv.backend.repository.OtpRepository;
 import com.cinecooltv.backend.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Random;
 
 @Service
 public class OtpService {
@@ -21,14 +20,8 @@ public class OtpService {
         this.userRepository = userRepository;
     }
 
-    public String generateOtp() {
-        return String.valueOf(100000 + new Random().nextInt(900000));
-    }
-
-    // ================= CREATE OTP =================
     @Transactional
     public void createOtp(String email, String otp) {
-
         OtpVerification entity = new OtpVerification();
         entity.setEmail(email);
         entity.setOtp(otp);
@@ -38,7 +31,6 @@ public class OtpService {
         otpRepository.save(entity);
     }
 
-    // ================= VERIFY OTP =================
     @Transactional
     public void verifyOtp(String email, String otp) {
 

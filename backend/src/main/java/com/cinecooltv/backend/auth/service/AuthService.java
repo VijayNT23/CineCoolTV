@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 
 @Service
 public class AuthService {
@@ -30,43 +31,34 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    // ================= SIGNUP =================
     public void signup(String email, String password, String name) {
 
-        userRepository.findByEmail(email).ifPresent(user -> {
-            if (user.isVerified()) {
-                throw new RuntimeException("Email already registered");
-            }
-        });
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new RuntimeException("Email already registered");
+        }
 
-        User user = userRepository.findByEmail(email)
-                .orElseGet(() -> {
-                    User u = new User();
-                    u.setEmail(email);
-                    u.setName(name);
-                    u.setPassword(passwordEncoder.encode(password));
-                    u.setVerified(false);
-                    u.setCreatedAt(LocalDateTime.now());
-                    return userRepository.save(u);
-                });
+        User user = new User();
+        user.setEmail(email);
+        user.setName(name);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setVerified(false);
+        user.setCreatedAt(LocalDateTime.now());
 
-        String otp = otpService.generateOtp();
+        userRepository.save(user);
+
+        String otp = generateOtp();
         otpService.createOtp(email, otp);
-        emailService.sendOtp(email, otp);
+        emailService.sendOtpEmail(email, otp);
     }
 
-    // ================= VERIFY OTP =================
     public void verifyOtp(String email, String otp) {
         otpService.verifyOtp(email, otp);
     }
 
-    // ================= LOGIN =================
     public String login(String email, String password) {
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new RuntimeException("Invalid email or password")
-                );
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
@@ -82,27 +74,13 @@ public class AuthService {
         return jwtService.generateToken(user.getEmail());
     }
 
-    // ================= FORGOT PASSWORD =================
-    public void forgotPassword(String email) {
-
-        userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        String otp = otpService.generateOtp();
+    public void resendOtp(String email) {
+        String otp = generateOtp();
         otpService.createOtp(email, otp);
-        emailService.sendOtp(email, otp);
+        emailService.sendOtpEmail(email, otp);
     }
 
-    // ================= RESET PASSWORD =================
-    public void resetPassword(String email, String otp, String newPassword) {
-
-        otpService.verifyOtp(email, otp);
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
+    private String generateOtp() {
+        return String.valueOf(100000 + new Random().nextInt(900000));
     }
 }

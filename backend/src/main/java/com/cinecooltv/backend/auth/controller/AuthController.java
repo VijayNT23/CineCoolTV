@@ -1,9 +1,9 @@
 package com.cinecooltv.backend.auth.controller;
 
+import com.cinecooltv.backend.auth.dto.LoginRequest;
 import com.cinecooltv.backend.auth.dto.OtpRequest;
-import com.cinecooltv.backend.auth.dto.*;
+import com.cinecooltv.backend.auth.dto.SignupRequest;
 import com.cinecooltv.backend.auth.service.AuthService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,59 +23,30 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // ================= SIGNUP =================
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
-        authService.signup(
-                request.getEmail(),
-                request.getPassword(),
-                request.getName()
-        );
-        return ResponseEntity.ok(
-                Map.of("message", "OTP sent to your email. Please verify.")
-        );
+        authService.signup(request.getEmail(), request.getPassword(), request.getName());
+        return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
     }
 
-    // ================= VERIFY OTP =================
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest request) {
         authService.verifyOtp(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(
-                Map.of("message", "Email verified successfully")
-        );
+        return ResponseEntity.ok(Map.of("message", "Account verified"));
     }
 
-    // ================= LOGIN =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        String token = authService.login(
-                request.getEmail(),
-                request.getPassword()
-        );
-        return ResponseEntity.ok(
-                Map.of("token", token)
-        );
+        String token = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(Map.of(
+                "message", "Login successful",
+                "token", token
+        ));
     }
 
-    // ================= FORGOT PASSWORD =================
-    @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        authService.forgotPassword(request.getEmail());
-        return ResponseEntity.ok(
-                Map.of("message", "OTP sent to email")
-        );
-    }
-
-    // ================= RESET PASSWORD =================
-    @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(
-                request.getEmail(),
-                request.getOtp(),
-                request.getNewPassword()
-        );
-        return ResponseEntity.ok(
-                Map.of("message", "Password reset successful")
-        );
+    @PostMapping("/resend-otp")
+    public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> body) {
+        authService.resendOtp(body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "OTP resent"));
     }
 }
