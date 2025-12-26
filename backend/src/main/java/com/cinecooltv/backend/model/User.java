@@ -1,23 +1,15 @@
-package com.cinecooltv.backend.model;
-
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import java.time.LocalDateTime;
-
+@Entity
+@Table(name = "users")
 @Getter
 @Setter
 @ToString
-@Entity
-@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "username", nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "email", unique = true, nullable = false)
