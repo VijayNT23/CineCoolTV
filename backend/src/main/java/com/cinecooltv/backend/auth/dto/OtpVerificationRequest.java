@@ -6,8 +6,11 @@ import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class OtpVerificationRequest {
+
     @NotBlank
     @Email
     private String email;
+
+    @NotBlank
     private String otp;
 }

@@ -38,7 +38,7 @@ public class AuthService {
 
         User user = new User();
         user.setEmail(email);
-        user.setName(name);
+        user.setUsername(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(false);
         user.setOtpVerified(false);

@@ -9,6 +9,8 @@ public class OtpRequest {
     @NotBlank
     @Email
     private String email;
+
+    @NotBlank
     private String otp;
 
     public OtpRequest() {

@@ -217,14 +217,14 @@ const Signup = () => {
                       Full Name
                     </label>
                     <input
-                        id="name"
-                        name="name"
+                        id="username"
+                        name="username"
                         type="text"
                         required
                         className="appearance-none relative block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
                         placeholder="Enter your full name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         disabled={loading}
                         autoComplete="name"
                     />

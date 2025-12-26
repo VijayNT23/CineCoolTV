@@ -171,7 +171,7 @@ public class AiController {
             System.out.println("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥");
             System.out.println("🔥🔥🔥 GROQ API ERROR OCCURRED");
             System.out.println("🔥🔥🔥 ERROR MESSAGE: " + e.getMessage());
-            System.out.println("🔥🔥🔥 ERROR TYPE: " + e.getClass().getName());
+            System.out.println("🔥🔥🔥 ERROR TYPE: " + e.getClass().getUsername());
             
             // Print full stack trace
             System.out.println("🔥🔥🔥 FULL STACK TRACE:");

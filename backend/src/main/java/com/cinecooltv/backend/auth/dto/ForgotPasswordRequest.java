@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class ForgotPasswordRequest {
+
     @NotBlank
     @Email
     private String email;
