@@ -28,10 +28,10 @@ public class AuthService {
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        // ✅ REMOVED: secureRandom field (not used)
     }
 
-    public void signup(String email, String password, String name) {
+    // 🔧 Fix #1: Don't crash signup if email fails
+    public SignupResult signup(String email, String password, String name) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already registered");
         }
@@ -41,14 +41,30 @@ public class AuthService {
         user.setName(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(false);
-        user.setOtpVerified(false); // New users start with OTP not verified
+        user.setOtpVerified(false);
         user.setCreatedAt(LocalDateTime.now());
 
         userRepository.save(user);
 
-        // Generate OTP for email verification
+        // Generate OTP
         String otp = otpService.createOtp(email);
-        emailService.sendOtpEmail(email, otp);
+
+        // 🔧 Fix #1: Wrap email sending in try/catch
+        boolean emailSent = false;
+        String message;
+
+        try {
+            emailService.sendOtpEmail(email, otp);
+            emailSent = true;
+            message = "Signup successful. OTP sent to email.";
+        } catch (Exception e) {
+            // Log error but don't crash signup
+            System.err.println("❌ OTP email failed for " + email + ": " + e.getMessage());
+            message = "Signup successful. OTP delivery delayed. Please check your email or request a new OTP.";
+        }
+
+        // ✅ Return structured result
+        return new SignupResult(true, message, emailSent);
     }
 
     // 🔁 OTP VERIFY FLOW for email verification (signup)
@@ -56,12 +72,12 @@ public class AuthService {
         // 1️⃣ Verify OTP
         otpService.verifyOtp(email, otp);
 
-        // ✅ FIX 1: Mark user as email-verified
+        // ✅ Mark user as email-verified
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setVerified(true);        // ✅ Email verified
-        user.setOtpVerified(true);     // ✅ OTP verified (for signup flow)
+        user.setVerified(true);
+        user.setOtpVerified(true);
         user.setVerifiedAt(LocalDateTime.now());
         userRepository.save(user);
     }
@@ -88,11 +104,14 @@ public class AuthService {
         // 3️⃣ Generate OTP for login verification
         String otp = otpService.createOtp(email);
 
-        // 4️⃣ Send OTP via email
-        emailService.sendOtpEmail(email, otp);
-
-        // Return message instead of JWT
-        return "OTP sent to your email. Please verify to complete login.";
+        // 🔧 Apply same fix for login OTP emails
+        try {
+            emailService.sendOtpEmail(email, otp);
+            return "OTP sent to your email. Please verify to complete login.";
+        } catch (Exception e) {
+            System.err.println("❌ Login OTP email failed for " + email + ": " + e.getMessage());
+            return "Login initiated. OTP delivery delayed. Please check your email or request a new OTP.";
+        }
     }
 
     // 🔁 OTP VERIFY FLOW for login
@@ -113,16 +132,21 @@ public class AuthService {
         return jwtService.generateToken(user.getEmail());
     }
 
-    public void resendOtp(String email) {
+    public String resendOtp(String email) {
         // Check if user exists
         userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // Generate and send new OTP
         String otp = otpService.createOtp(email);
-        emailService.sendOtpEmail(email, otp);
 
-        // ⚠ ISSUE 2: No rate limiting (acceptable for now, but should be added later)
+        try {
+            emailService.sendOtpEmail(email, otp);
+            return "OTP resent successfully.";
+        } catch (Exception e) {
+            System.err.println("❌ Resend OTP email failed for " + email + ": " + e.getMessage());
+            return "OTP generated but delivery delayed. Please check your email.";
+        }
     }
 
     // Direct login for testing/development (if needed)
@@ -138,14 +162,42 @@ public class AuthService {
             throw new RuntimeException("Please verify your email first");
         }
 
-        // For direct login, we still need OTP verification
-        // So redirect to OTP flow
         user.setOtpVerified(false);
         userRepository.save(user);
 
         String otp = otpService.createOtp(email);
-        emailService.sendOtpEmail(email, otp);
 
-        return "OTP sent to your email. Please verify to complete login.";
+        try {
+            emailService.sendOtpEmail(email, otp);
+            return "OTP sent to your email. Please verify to complete login.";
+        } catch (Exception e) {
+            System.err.println("❌ Direct login OTP email failed: " + e.getMessage());
+            return "Login initiated. OTP delivery delayed.";
+        }
+    }
+
+    // ✅ Inner class for structured response
+    public static class SignupResult {
+        private final boolean success;
+        private final String message;
+        private final boolean emailSent;
+
+        public SignupResult(boolean success, String message, boolean emailSent) {
+            this.success = success;
+            this.message = message;
+            this.emailSent = emailSent;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public boolean isEmailSent() {
+            return emailSent;
+        }
     }
 }
