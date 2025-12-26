@@ -1,15 +1,14 @@
 package com.cinecooltv.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
+import lombok.*;
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "users")
 public class User {
@@ -27,26 +26,28 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private boolean isVerified = false;
+    @Column(name = "otp_verified", nullable = false)
+    private boolean otpVerified = false;
 
-    private LocalDateTime verifiedAt;
+    @Column(name = "is_verified", nullable = false)
+    private boolean verified = false;
 
-    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
     private LocalDateTime updatedAt;
-
+    private LocalDateTime verifiedAt;
     private LocalDateTime lastLogin;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = this.createdAt;
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+
+        otpVerified = false;
+        verified = false;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }
