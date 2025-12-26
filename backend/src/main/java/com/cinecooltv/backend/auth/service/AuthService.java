@@ -47,7 +47,6 @@ public class AuthService {
         user.setName(name);
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(false);
-        user.setOtpVerified(false);
         user.setCreatedAt(LocalDateTime.now());
 
         userRepository.save(user);
@@ -84,8 +83,8 @@ public class AuthService {
                         "User not found"
                 ));
 
+        // ✅ CORRECT: Only set verified status for email verification
         user.setVerified(true);
-        user.setOtpVerified(true);
         user.setVerifiedAt(LocalDateTime.now());
         userRepository.save(user);
     }
@@ -116,8 +115,6 @@ public class AuthService {
             );
         }
 
-        // 2️⃣ Reset OTP verification status for this login session
-        user.setOtpVerified(false);
         userRepository.save(user);
 
         // 3️⃣ Generate OTP for login verification
@@ -145,8 +142,6 @@ public class AuthService {
                         "User not found"
                 ));
 
-        // 3️⃣ Mark OTP as verified
-        user.setOtpVerified(true);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -196,7 +191,6 @@ public class AuthService {
             );
         }
 
-        user.setOtpVerified(false);
         userRepository.save(user);
 
         String otp = otpService.createOtp(email);

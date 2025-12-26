@@ -66,9 +66,9 @@ public class OtpService {
             throw new RuntimeException("OTP expired");
         }
 
-        // Check if OTP matches
+
         if (!otpRecord.getOtp().equals(otp)) {
-            // 🔒 ADD ATTEMPT LIMIT (as specified)
+
             otpRecord.setAttempts(otpRecord.getAttempts() + 1);
 
             if (otpRecord.getAttempts() > MAX_ATTEMPTS) {
@@ -80,21 +80,17 @@ public class OtpService {
             throw new RuntimeException("Invalid OTP");
         }
 
-        // ✅ AFTER SUCCESSFUL OTP (as specified)
         otpRecord.setVerified(true);
-        otpRepository.delete(otpRecord); // ❗ DELETE after successful verification
+        otpRepository.delete(otpRecord);
 
-        // Update user verification status
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setVerified(true);
-        user.setOtpVerified(true); // Set OTP verified flag
         user.setVerifiedAt(LocalDateTime.now());
         userRepository.save(user);
     }
 
-    // Optional: Method to clean up expired OTPs
     @Transactional
     public void cleanupExpiredOtps() {
         LocalDateTime now = LocalDateTime.now();
