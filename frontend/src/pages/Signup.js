@@ -50,9 +50,9 @@ const Signup = () => {
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/signup`,
           {
+            username,
             email,
             password,
-            name,
           },
           {
             headers: {
@@ -226,7 +226,7 @@ const Signup = () => {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         disabled={loading}
-                        autoComplete="name"
+                        autoComplete="username"
                     />
                   </div>
 

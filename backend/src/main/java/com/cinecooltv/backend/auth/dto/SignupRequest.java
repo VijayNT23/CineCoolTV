@@ -1,16 +1,16 @@
 package com.cinecooltv.backend.auth.dto;
 
-import lombok.Data;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class SignupRequest {
 
     @NotBlank
     private String username;
 
+    @NotBlank
     @Email
     private String email;
 
