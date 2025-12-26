@@ -4,10 +4,10 @@ import axios from "axios";
 const AuthContext = createContext(null);
 
 // ✅ Backend base URL
-const API_BASE = "https://cinecooltv-backend.onrender.com";
+const API_BASE = process.env.REACT_APP_API_URL || "https://cinecooltv-backend.onrender.com";
 
 export const AuthProvider = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState(null); // Changed from [user, setUser]
+    const [currentUser, setCurrentUser] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -17,28 +17,28 @@ export const AuthProvider = ({ children }) => {
 
         if (storedToken) {
             try {
-                // ✅ Decode JWT token to get user info
+                // ✅ CORRECT JWT DECODING: Get email from 'sub' field
                 const payload = JSON.parse(atob(storedToken.split(".")[1]));
+                const email = payload.sub; // ✅ 'sub' contains email
 
                 setToken(storedToken);
                 setCurrentUser({
-                    id: payload.sub || payload.userId,
-                    email: payload.email,
-                    name: payload.name || payload.email?.split("@")[0] || "User"
+                    email: email,
+                    name: email.split("@")[0] // ✅ Derive name from email
                 });
 
                 // ✅ Also restore userProfile from localStorage if available
                 const storedProfile = localStorage.getItem("userProfile");
                 if (!storedProfile) {
                     localStorage.setItem("userProfile", JSON.stringify({
-                        name: payload.name || payload.email?.split("@")[0] || "User",
-                        email: payload.email,
+                        name: email.split("@")[0],
+                        email: email,
                         avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
                         joined: new Date().toLocaleDateString()
                     }));
                 }
 
-                // ✅ CRITICAL: Force stats re-calculation when user is restored from token
+                // ✅ Force stats re-calculation when user is restored from token
                 setTimeout(() => {
                     window.dispatchEvent(new Event("libraryUpdated"));
                 }, 100);
@@ -54,77 +54,24 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    // ✅ LOGIN (Backend JWT)
-    const login = async (email, password) => {
-        try {
-            const res = await axios.post(
-                `${API_BASE}/auth/login`,
-                { email, password },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+    // ✅ REMOVED: login(email, password) function - OTP flow handles this
 
-            const jwt = res.data.token || res.data;
-
-            if (!jwt) {
-                throw new Error("No token received");
-            }
-
-            // ✅ Decode token to get user info
-            const payload = JSON.parse(atob(jwt.split(".")[1]));
-
-            // ✅ Persist token and user data
-            localStorage.setItem("token", jwt);
-
-            const userData = {
-                id: payload.sub || payload.userId,
-                email: payload.email,
-                name: payload.name || email.split("@")[0]
-            };
-
-            // ✅ Store user profile in localStorage
-            localStorage.setItem("userProfile", JSON.stringify({
-                name: userData.name,
-                email: userData.email,
-                avatar: "https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png",
-                joined: new Date().toLocaleDateString()
-            }));
-
-            // ✅ Update state
-            setToken(jwt);
-            setCurrentUser(userData);
-
-            // ✅ CRITICAL: Force stats re-calculation after successful login
-            setTimeout(() => {
-                window.dispatchEvent(new Event("libraryUpdated"));
-            }, 100);
-
-            return { success: true, token: jwt };
-        } catch (err) {
-            console.error("Login failed:", err);
-            return {
-                success: false,
-                message:
-                    err.response?.data?.message ||
-                    "Invalid email or password",
-            };
-        }
-    };
-
-    // ✅ Simplified login for external callers (like Login.js)
+    // ✅ LOGIN WITH JWT TOKEN (After OTP verification)
     const loginWithToken = (jwt) => {
         try {
+            // ✅ CORRECT JWT DECODING
             const payload = JSON.parse(atob(jwt.split(".")[1]));
+            const email = payload.sub; // ✅ 'sub' contains email
+
+            if (!email) {
+                throw new Error("Invalid token: no email found");
+            }
 
             localStorage.setItem("token", jwt);
 
             const userData = {
-                id: payload.sub || payload.userId,
-                email: payload.email,
-                name: payload.name || payload.email?.split("@")[0] || "User"
+                email: email,
+                name: email.split("@")[0] // ✅ Derive name from email
             };
 
             // ✅ Store user profile in localStorage
@@ -138,7 +85,7 @@ export const AuthProvider = ({ children }) => {
             setToken(jwt);
             setCurrentUser(userData);
 
-            // ✅ CRITICAL: Force stats re-calculation
+            // ✅ Force stats re-calculation
             setTimeout(() => {
                 window.dispatchEvent(new Event("libraryUpdated"));
             }, 100);
@@ -146,6 +93,7 @@ export const AuthProvider = ({ children }) => {
             return userData;
         } catch (err) {
             console.error("Error logging in with token:", err);
+            localStorage.removeItem("token");
             return null;
         }
     };
@@ -164,14 +112,62 @@ export const AuthProvider = ({ children }) => {
         }, 100);
     };
 
+    // ✅ SIGNUP function (optional - if you need it in context)
+    const signup = async (email, password, name) => {
+        try {
+            const res = await axios.post(
+                `${API_BASE}/api/auth/signup`,
+                { email, password, name },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            return { success: true, message: res.data.message };
+        } catch (err) {
+            console.error("Signup failed:", err);
+            return {
+                success: false,
+                message: err.response?.data?.message || "Signup failed",
+            };
+        }
+    };
+
+    // ✅ VERIFY EMAIL OTP (for signup flow)
+    const verifyEmailOtp = async (email, otp) => {
+        try {
+            const res = await axios.post(
+                `${API_BASE}/api/auth/verify-email`,
+                { email, otp },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            return { success: true, message: res.data.message };
+        } catch (err) {
+            console.error("Email verification failed:", err);
+            return {
+                success: false,
+                message: err.response?.data?.message || "OTP verification failed",
+            };
+        }
+    };
+
     const value = {
-        currentUser, // Changed from 'user'
+        currentUser,
         token,
-        login,
-        loginWithToken, // Added for external use
+        loginWithToken, // ✅ Only this for login (after OTP verification)
         logout,
+        signup, // ✅ Optional: for signup flow
+        verifyEmailOtp, // ✅ Optional: for email verification
         isAuthenticated: !!token && !!currentUser,
         loading,
+        setUser: setCurrentUser, // ✅ Add setter for external use
     };
 
     return (

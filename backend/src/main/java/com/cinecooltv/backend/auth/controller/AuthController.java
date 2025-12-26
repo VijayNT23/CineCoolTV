@@ -4,6 +4,7 @@ import com.cinecooltv.backend.auth.dto.LoginRequest;
 import com.cinecooltv.backend.auth.dto.OtpRequest;
 import com.cinecooltv.backend.auth.dto.SignupRequest;
 import com.cinecooltv.backend.auth.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,20 +25,26 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
         authService.signup(request.getEmail(), request.getPassword(), request.getName());
         return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
     }
 
-    @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest request) {
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody OtpRequest request) {
         authService.verifyOtp(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(Map.of("message", "Account verified"));
+        return ResponseEntity.ok(Map.of("message", "Account verified successfully"));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        String token = authService.login(request.getEmail(), request.getPassword());
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        String message = authService.initiateLogin(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(Map.of("message", message));
+    }
+
+    @PostMapping("/verify-login-otp")
+    public ResponseEntity<?> verifyLoginOtp(@Valid @RequestBody OtpRequest request) {
+        String token = authService.verifyLoginOtp(request.getEmail(), request.getOtp());
         return ResponseEntity.ok(Map.of(
                 "message", "Login successful",
                 "token", token
@@ -46,7 +53,12 @@ public class AuthController {
 
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> body) {
-        authService.resendOtp(body.get("email"));
+        String email = body.get("email");
+        if (email == null || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+
+        authService.resendOtp(email);
         return ResponseEntity.ok(Map.of("message", "OTP resent"));
     }
 }

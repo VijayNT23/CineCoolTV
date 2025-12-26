@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.io.Decoders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +24,9 @@ public class JwtService {
     private long jwtExpiration;
 
     private Key getSigningKey() {
-        // Use the secret key as plain text - works with your current secret
-        return Keys.hmacShaKeyFor(secretKey.getBytes());
+        // ✅ Correct way: Use Base64 decoded secret key for HMAC-SHA
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(String email) {

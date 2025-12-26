@@ -7,5 +7,7 @@ import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<OtpVerification, Long> {
 
-    Optional<OtpVerification> findTopByEmailOrderByExpiryTimeDesc(String email);
+    Optional<OtpVerification> findByEmail(String email);
+
+    Optional<OtpVerification> findTopByEmailOrderByExpiryDesc(String email);
 }

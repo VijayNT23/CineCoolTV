@@ -6,14 +6,28 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
+@Table(name = "otp_verification")
 public class OtpVerification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String email;
+
+    @Column(nullable = false)
     private String otp;
-    private LocalDateTime expiryTime;
-    private boolean used;
+
+    @Column(nullable = false)
+    private LocalDateTime expiry;
+
+    @Column(nullable = false)
+    private int attempts = 0;
+
+    @Column(nullable = false)
+    private boolean verified = false;
+
+    @Column(nullable = false)
+    private boolean used = false;
 }

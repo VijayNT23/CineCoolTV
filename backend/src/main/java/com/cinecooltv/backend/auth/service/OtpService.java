@@ -7,6 +7,7 @@ import com.cinecooltv.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
@@ -14,50 +15,91 @@ public class OtpService {
 
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
+    private final SecureRandom secureRandom;
+    private static final int MAX_ATTEMPTS = 5;
+    private static final int OTP_VALIDITY_MINUTES = 10;
 
     public OtpService(OtpRepository otpRepository, UserRepository userRepository) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
+        this.secureRandom = new SecureRandom();
+    }
+
+    // ✅ Generate secure OTP
+    public String generateOtp() {
+        int otpNumber = 100000 + secureRandom.nextInt(900000);
+        return String.valueOf(otpNumber);
     }
 
     @Transactional
-    public void createOtp(String email, String otp) {
+    public String createOtp(String email) {
+        // Generate secure OTP
+        String otp = generateOtp();
+
         OtpVerification entity = new OtpVerification();
         entity.setEmail(email);
         entity.setOtp(otp);
-        entity.setExpiryTime(LocalDateTime.now().plusMinutes(10));
+        entity.setExpiry(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
         entity.setUsed(false);
+        entity.setVerified(false);
+        entity.setAttempts(0);
 
         otpRepository.save(entity);
+        return otp; // Return the generated OTP
     }
 
     @Transactional
     public void verifyOtp(String email, String otp) {
-
-        OtpVerification data = otpRepository
-                .findTopByEmailOrderByExpiryTimeDesc(email)
+        // Get the latest OTP for this email
+        OtpVerification otpRecord = otpRepository
+                .findTopByEmailOrderByExpiryDesc(email)
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
 
-        if (data.isUsed()) {
+        // Check if OTP is already used
+        if (otpRecord.isUsed()) {
             throw new RuntimeException("OTP already used");
         }
 
-        if (data.getExpiryTime().isBefore(LocalDateTime.now())) {
+        // Check if OTP is expired
+        if (otpRecord.getExpiry().isBefore(LocalDateTime.now())) {
+            otpRepository.delete(otpRecord); // Clean up expired OTP
             throw new RuntimeException("OTP expired");
         }
 
-        if (!data.getOtp().equals(otp)) {
+        // Check if OTP matches
+        if (!otpRecord.getOtp().equals(otp)) {
+            // 🔒 ADD ATTEMPT LIMIT (as specified)
+            otpRecord.setAttempts(otpRecord.getAttempts() + 1);
+
+            if (otpRecord.getAttempts() > MAX_ATTEMPTS) {
+                otpRepository.delete(otpRecord);
+                throw new RuntimeException("OTP locked. Please request a new OTP.");
+            }
+
+            otpRepository.save(otpRecord);
             throw new RuntimeException("Invalid OTP");
         }
 
-        data.setUsed(true);
-        otpRepository.save(data);
+        // ✅ AFTER SUCCESSFUL OTP (as specified)
+        otpRecord.setVerified(true);
+        otpRepository.delete(otpRecord); // ❗ DELETE after successful verification
 
+        // Update user verification status
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setVerified(true);
+        user.setOtpVerified(true); // Set OTP verified flag
         user.setVerifiedAt(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    // Optional: Method to clean up expired OTPs
+    @Transactional
+    public void cleanupExpiredOtps() {
+        LocalDateTime now = LocalDateTime.now();
+        otpRepository.findAll().stream()
+                .filter(otp -> otp.getExpiry().isBefore(now))
+                .forEach(otpRepository::delete);
     }
 }

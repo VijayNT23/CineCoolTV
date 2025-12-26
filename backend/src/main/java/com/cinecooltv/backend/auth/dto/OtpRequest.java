@@ -2,6 +2,8 @@ package com.cinecooltv.backend.auth.dto;
 
 public class OtpRequest {
 
+    @NotBlank
+    @Email
     private String email;
     private String otp;
 

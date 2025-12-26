@@ -29,6 +29,9 @@ public class User {
     @Column(name = "is_verified", nullable = false)
     private boolean verified = false;
 
+    @Column(name = "otp_verified", nullable = false)
+    private boolean otpVerified = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

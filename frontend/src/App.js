@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
+import VerifyLoginOtp from "./pages/VerifyLoginOtp";
 
 const App = () => {
     return (
@@ -44,6 +45,7 @@ const App = () => {
                             <Route path="/signup" element={<Signup />} />
                             <Route path="*" element={<NotFound />} />
                             <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/verify-login-otp" element={<VerifyLoginOtp />} />
                         </Routes>
                     </div>
                 </div>

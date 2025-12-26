@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
 const Login = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -35,7 +33,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Direct API call to backend
+      // ✅ CORRECT: Direct API call to initiate OTP flow
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/login`,
           { email, password },
@@ -46,59 +44,55 @@ const Login = () => {
           }
       );
 
-      const { token, message } = response.data;
-
-      if (!token) {
-        throw new Error("No authentication token received");
-      }
-
-      // Use the auth context login
-      const result = await login(email, password);
-
-      if (result.success) {
-        // Remember me functionality
+      // Expect OTP_REQUIRED
+      if (response.data.status === "OTP_REQUIRED") {
+        // ✅ Success: OTP sent, navigate to OTP verification page
         if (rememberMe) {
           localStorage.setItem("rememberedEmail", email);
         } else {
           localStorage.removeItem("rememberedEmail");
         }
 
-        // Show success message
-        setError(""); // Clear any errors
-        setTimeout(() => {
-          navigate("/profile");
-        }, 500);
+        navigate("/verify-login-otp", {
+          state: {
+            email,
+            flow: response.data.flow || "LOGIN"
+          }
+        });
       } else {
-        setError(result.message || "Login failed. Please try again.");
+        setError("Unexpected response from server");
       }
     } catch (err) {
       console.error("Login error details:", err);
-
-      const backendMsg = err.response?.data?.message;
-      const status = err.response?.status;
-
-      if (status === 401) {
-        setError(backendMsg || "Invalid email or password. Please try again.");
-      } else if (status === 403) {
-        setError("Account not verified. Please check your email for verification link.");
-      } else if (status === 404) {
-        setError("Account not found. Please sign up first.");
-      } else if (backendMsg) {
-        setError(backendMsg);
-      } else if (err.code === "ERR_NETWORK") {
-        setError("Network error. Please check your internet connection.");
-      } else if (err.code === "ERR_BAD_REQUEST") {
-        setError("Invalid request. Please check your credentials.");
-      } else {
-        setError("Login failed. Please try again.");
-      }
+      handleError(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleError = (err) => {
+    const backendMsg = err.response?.data?.message;
+    const status = err.response?.status;
+
+    if (status === 401) {
+      setError("Invalid email or password. Please try again.");
+    } else if (status === 403 || backendMsg?.includes("verify your email")) {
+      setError("Account not verified. Please check your email for verification link.");
+    } else if (status === 404) {
+      setError("Account not found. Please sign up first.");
+    } else if (backendMsg) {
+      setError(backendMsg);
+    } else if (err.code === "ERR_NETWORK") {
+      setError("Network error. Please check your internet connection.");
+    } else if (err.code === "ERR_BAD_REQUEST") {
+      setError("Invalid request. Please check your credentials.");
+    } else {
+      setError("Login failed. Please try again.");
+    }
+  };
+
   // Load remembered email on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const rememberedEmail = localStorage.getItem("rememberedEmail");
     if (rememberedEmail) {
       setEmail(rememberedEmail);
@@ -269,8 +263,6 @@ const Login = () => {
                 </button>
               </div>
             </form>
-
-            {/* REMOVED SOCIAL LOGIN SECTION */}
 
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-400">

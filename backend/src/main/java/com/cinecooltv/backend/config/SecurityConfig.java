@@ -11,19 +11,14 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -37,18 +32,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                // ✅ Enable CSRF with proper configuration for stateless API
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .ignoringRequestMatchers("/api/auth/**") // Disable CSRF for auth endpoints
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/health",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/error",
-                                "/**"  // Add this to allow all for debugging
+                                "/api/auth/**",    // Auth endpoints
+                                "/health",         // Health check
+                                "/swagger-ui/**",  // Swagger UI
+                                "/v3/api-docs/**", // OpenAPI docs
+                                "/error"           // Error endpoint
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated() // All other endpoints require auth
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -56,6 +53,14 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        // ✅ Use CookieCsrfTokenRepository for better security
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        return repository;
     }
 
     @Bean
@@ -74,46 +79,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        // Allow your frontend origins
-        configuration.setAllowedOrigins(Arrays.asList(
-                "https://cine-cool-tv.vercel.app",
-                "http://localhost:3000"
-        ));
-
-        // Allow all common HTTP methods including OPTIONS for preflight
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
-        ));
-
-        // Allow all headers
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin",
-                "Access-Control-Request-Method", "Access-Control-Request-Headers",
-                "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials",
-                "X-API-KEY", "X-CSRF-TOKEN"
-        ));
-
-        // Expose headers
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization", "Content-Type", "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials", "Access-Control-Allow-Headers"
-        ));
-
-        // Allow credentials (cookies, authorization headers)
-        configuration.setAllowCredentials(true);
-
-        // Cache preflight response for 1 hour
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-
-        return source;
     }
 }

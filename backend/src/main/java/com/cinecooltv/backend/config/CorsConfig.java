@@ -17,14 +17,19 @@ public class CorsConfig {
         // Allow credentials
         config.setAllowCredentials(true);
 
-        // Allow all origins (you can specify specific origins in production)
+        // ✅ Specific allowed origins (not wildcard when using credentials)
         config.addAllowedOrigin("https://cine-cool-tv.vercel.app");
         config.addAllowedOrigin("http://localhost:3000");
 
-        // Allow all headers
-        config.addAllowedHeader("*");
+        // ❌ REMOVED: config.addAllowedHeader("*");
+        // ✅ CHANGE TO: Specific allowed headers only
+        config.addAllowedHeader("Authorization");
+        config.addAllowedHeader("Content-Type");
+        config.addAllowedHeader("X-Requested-With");
+        config.addAllowedHeader("Accept");
+        config.addAllowedHeader("Origin");
 
-        // Allow all methods
+        // Allow specific methods
         config.addAllowedMethod("OPTIONS");
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
@@ -32,11 +37,14 @@ public class CorsConfig {
         config.addAllowedMethod("DELETE");
         config.addAllowedMethod("PATCH");
 
-        // Expose headers
+        // Expose specific headers to client
         config.addExposedHeader("Authorization");
         config.addExposedHeader("Content-Type");
         config.addExposedHeader("Access-Control-Allow-Origin");
         config.addExposedHeader("Access-Control-Allow-Credentials");
+
+        // Set max age for preflight requests
+        config.setMaxAge(3600L); // 1 hour
 
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
