@@ -28,11 +28,10 @@ public class OtpService {
         return String.valueOf(100000 + RANDOM.nextInt(900000));
     }
 
-    // 📩 Create & send OTP
+    // ✅ FIX: Add this missing method
     @Transactional
-    public void createAndSendOtp(String email) {
-
-        // ❌ Invalidate previous OTPs
+    public String createOtp(String email) {
+        // Cleanup old OTPs for this email
         otpRepository.deleteByEmail(email);
 
         String otp = generateOtp();
@@ -47,15 +46,19 @@ public class OtpService {
                 .build();
 
         otpRepository.save(entity);
+        return otp; // ✅ Return OTP without sending email
+    }
 
-        // ✅ Send OTP via Brevo API
+    // 📩 Create & send OTP (existing method)
+    @Transactional
+    public void createAndSendOtp(String email) {
+        String otp = createOtp(email); // ✅ Reuse the new method
         emailService.sendOtpEmail(email, otp);
     }
 
     // ✅ Verify OTP
     @Transactional
     public void verifyOtp(String email, String otp) {
-
         OtpVerification otpRecord = otpRepository
                 .findTopByEmailOrderByExpiryDesc(email)
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
@@ -66,7 +69,6 @@ public class OtpService {
         }
 
         if (!otpRecord.getOtp().equals(otp)) {
-
             int attempts = otpRecord.getAttempts() + 1;
             otpRecord.setAttempts(attempts);
 

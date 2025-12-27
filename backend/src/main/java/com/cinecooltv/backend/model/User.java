@@ -42,7 +42,10 @@ public class User {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
 
+        @Builder.Default
         otpVerified = false;
+
+        @Builder.Default
         verified = false;
     }
 

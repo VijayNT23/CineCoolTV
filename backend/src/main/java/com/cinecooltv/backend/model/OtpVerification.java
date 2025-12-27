@@ -1,13 +1,15 @@
 package com.cinecooltv.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-
+import lombok.*;
 import java.time.LocalDateTime;
 
-@Data
-@Entity
-@Table(name = "otp_verifications")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Table(name = "otp_verification")
 public class OtpVerification {
 
     @Id
@@ -24,11 +26,8 @@ public class OtpVerification {
     private LocalDateTime expiry;
 
     @Column(nullable = false)
-    private boolean used = false;
+    private int attempts;
 
     @Column(nullable = false)
-    private boolean verified = false;
-
-    @Column(nullable = false)
-    private int attempts = 0;
+    private boolean verified;
 }
