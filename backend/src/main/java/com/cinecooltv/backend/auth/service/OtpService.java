@@ -5,82 +5,81 @@ import com.cinecooltv.backend.model.User;
 import com.cinecooltv.backend.repository.OtpRepository;
 import com.cinecooltv.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class OtpService {
 
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
-    private final SecureRandom secureRandom;
+    private final EmailService emailService;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
     private static final int MAX_ATTEMPTS = 5;
     private static final int OTP_VALIDITY_MINUTES = 10;
 
-    public OtpService(OtpRepository otpRepository, UserRepository userRepository) {
-        this.otpRepository = otpRepository;
-        this.userRepository = userRepository;
-        this.secureRandom = new SecureRandom();
+    // 🔐 Generate secure 6-digit OTP
+    private String generateOtp() {
+        return String.valueOf(100000 + RANDOM.nextInt(900000));
     }
 
-    // ✅ Generate secure OTP
-    public String generateOtp() {
-        int otpNumber = 100000 + secureRandom.nextInt(900000);
-        return String.valueOf(otpNumber);
-    }
-
+    // 📩 Create & send OTP
     @Transactional
-    public String createOtp(String email) {
-        // Generate secure OTP
+    public void createAndSendOtp(String email) {
+
+        // ❌ Invalidate previous OTPs
+        otpRepository.deleteByEmail(email);
+
         String otp = generateOtp();
 
-        OtpVerification entity = new OtpVerification();
-        entity.setEmail(email);
-        entity.setOtp(otp);
-        entity.setExpiry(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
-        entity.setUsed(false);
-        entity.setVerified(false);
-        entity.setAttempts(0);
+        OtpVerification entity = OtpVerification.builder()
+                .email(email)
+                .otp(otp)
+                .expiry(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES))
+                .attempts(0)
+                .verified(false)
+                .used(false)
+                .build();
 
         otpRepository.save(entity);
-        return otp; // Return the generated OTP
+
+        // ✅ Send OTP via Brevo API
+        emailService.sendOtpEmail(email, otp);
     }
 
+    // ✅ Verify OTP
     @Transactional
     public void verifyOtp(String email, String otp) {
-        // Get the latest OTP for this email
+
         OtpVerification otpRecord = otpRepository
                 .findTopByEmailOrderByExpiryDesc(email)
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
 
-        // Check if OTP is already used
-        if (otpRecord.isUsed()) {
-            throw new RuntimeException("OTP already used");
-        }
-
-        // Check if OTP is expired
         if (otpRecord.getExpiry().isBefore(LocalDateTime.now())) {
-            otpRepository.delete(otpRecord); // Clean up expired OTP
+            otpRepository.delete(otpRecord);
             throw new RuntimeException("OTP expired");
         }
 
-
         if (!otpRecord.getOtp().equals(otp)) {
 
-            otpRecord.setAttempts(otpRecord.getAttempts() + 1);
+            int attempts = otpRecord.getAttempts() + 1;
+            otpRecord.setAttempts(attempts);
 
-            if (otpRecord.getAttempts() > MAX_ATTEMPTS) {
+            if (attempts >= MAX_ATTEMPTS) {
                 otpRepository.delete(otpRecord);
-                throw new RuntimeException("OTP locked. Please request a new OTP.");
+                throw new RuntimeException("Too many failed attempts. Request a new OTP.");
             }
 
             otpRepository.save(otpRecord);
             throw new RuntimeException("Invalid OTP");
         }
 
-        otpRecord.setVerified(true);
+        // ✅ OTP verified
         otpRepository.delete(otpRecord);
 
         User user = userRepository.findByEmail(email)
@@ -91,11 +90,9 @@ public class OtpService {
         userRepository.save(user);
     }
 
+    // 🧹 Cleanup expired OTPs
     @Transactional
     public void cleanupExpiredOtps() {
-        LocalDateTime now = LocalDateTime.now();
-        otpRepository.findAll().stream()
-                .filter(otp -> otp.getExpiry().isBefore(now))
-                .forEach(otpRepository::delete);
+        otpRepository.deleteByExpiryBefore(LocalDateTime.now());
     }
 }
