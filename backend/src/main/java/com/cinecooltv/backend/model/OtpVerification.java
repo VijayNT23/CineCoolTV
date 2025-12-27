@@ -2,6 +2,7 @@ package com.cinecooltv.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Entity
 @Table(name = "otp_verification")
 public class OtpVerification {
 
@@ -25,9 +27,15 @@ public class OtpVerification {
     @Column(nullable = false)
     private LocalDateTime expiry;
 
+    @Builder.Default
     @Column(nullable = false)
-    private int attempts;
+    private int attempts = 0;
 
+    @Builder.Default
     @Column(nullable = false)
-    private boolean verified;
+    private boolean verified = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean used = false;
 }

@@ -8,9 +8,9 @@ import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<OtpVerification, Long> {
 
-    Optional<OtpVerification> findByEmail(String email);
+    Optional<OtpVerification> findTopByEmailOrderByExpiryDesc(String email);
 
-    void deleteByEmail(String email); // ✅ REQUIRED
+    void deleteByEmail(String email);
 
-    void deleteByExpiryBefore(LocalDateTime time); // ✅ REQUIRED
+    void deleteByExpiryBefore(LocalDateTime time);
 }
