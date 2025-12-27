@@ -26,9 +26,11 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Builder.Default
     @Column(name = "otp_verified", nullable = false)
     private boolean otpVerified = false;
 
+    @Builder.Default
     @Column(name = "is_verified", nullable = false)
     private boolean verified = false;
 
@@ -41,12 +43,6 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-
-        @Builder.Default
-        otpVerified = false;
-
-        @Builder.Default
-        verified = false;
     }
 
     @PreUpdate
