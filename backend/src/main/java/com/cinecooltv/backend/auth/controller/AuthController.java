@@ -1,21 +1,24 @@
 package com.cinecooltv.backend.auth.controller;
 
-import com.cinecooltv.backend.auth.dto.LoginRequest;
-import com.cinecooltv.backend.auth.dto.OtpRequest;
-import com.cinecooltv.backend.auth.dto.SignupRequest;
+import com.cinecooltv.backend.auth.dto.*;
 import com.cinecooltv.backend.auth.service.AuthService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.cinecooltv.backend.auth.dto.OtpVerificationRequest;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
+@CrossOrigin
 public class AuthController {
 
     private final AuthService authService;
+
+    // ✅ MANUAL CONSTRUCTOR (NO Lombok)
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
