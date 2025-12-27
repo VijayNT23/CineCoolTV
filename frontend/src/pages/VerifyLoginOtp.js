@@ -49,7 +49,7 @@ const VerifyLoginOtp = () => {
 
         try {
             const res = await axios.post(
-                `${config.backendUrl}/auth/verify-login-otp`,
+                `${config.backendUrl}/api/auth/verify-login-otp`,
                 { email, otp },
                 {
                     headers: {

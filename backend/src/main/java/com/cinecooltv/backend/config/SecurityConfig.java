@@ -19,6 +19,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -32,6 +38,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // ✅ Enable CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // ✅ Enable CSRF with proper configuration for stateless API
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository())
@@ -39,14 +47,14 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",    // Auth endpoints
+                                "/api/auth/**",          // Auth endpoints
                                 "/health",
-                                "/actuator/health",// Health check
-                                "/swagger-ui/**",  // Swagger UI
-                                "/v3/api-docs/**", // OpenAPI docs
-                                "/error"           // Error endpoint
+                                "/actuator/health",      // Health check
+                                "/swagger-ui/**",        // Swagger UI
+                                "/v3/api-docs/**",       // OpenAPI docs
+                                "/error"                 // Error endpoint
                         ).permitAll()
-                        .anyRequest().authenticated() // All other endpoints require auth
+                        .anyRequest().authenticated()    // All other endpoints require auth
                 )
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -62,6 +70,42 @@ public class SecurityConfig {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
         return repository;
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Allow specific origins (configure based on your needs)
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",    // React dev server
+                "http://localhost:5173",    // Vite dev server
+                "http://localhost:8080"     // Alternative port
+        ));
+
+        // Allow specific HTTP methods
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+        ));
+
+        // Allow specific headers
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "X-XSRF-TOKEN"  // For CSRF token
+        ));
+
+        // Allow credentials (cookies, authorization headers)
+        configuration.setAllowCredentials(true);
+
+        // Cache preflight response for 1 hour
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean

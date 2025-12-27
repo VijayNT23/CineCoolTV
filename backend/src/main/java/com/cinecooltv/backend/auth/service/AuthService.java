@@ -72,8 +72,8 @@ public class AuthService {
         return new SignupResult(true, message, emailSent);
     }
 
-    // 🔁 OTP VERIFY FLOW for email verification (signup)
-    public void verifyOtp(String email, String otp) {
+    // 🔁 OTP VERIFY FLOW for email verification (signup) - NEW METHOD
+    public void verifySignupOtp(String email, String otp) {
         otpService.verifyOtp(email, otp);
 
         User user = userRepository.findByEmail(email)
@@ -87,8 +87,8 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    // 🔁 LOGIN FLOW
-    public String initiateLogin(String email, String password) {
+    // 🔁 LOGIN FLOW - Updated to match your requested method signature
+    public void login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
@@ -109,14 +109,12 @@ public class AuthService {
             );
         }
 
-        userRepository.save(user);
-
+        // Generate OTP for login
         String otp = otpService.createOtp(email);
 
-        // ✅ CORRECT: Throw exception if email fails
+        // Send OTP email
         try {
             emailService.sendOtpEmail(email, otp);
-            return "OTP sent to your email. Please verify to complete login.";
         } catch (Exception e) {
             System.err.println("❌ Login OTP email failed for " + email + ": " + e.getMessage());
             throw new ResponseStatusException(
@@ -126,7 +124,7 @@ public class AuthService {
         }
     }
 
-    // 🔁 OTP VERIFY FLOW for login
+    // 🔁 OTP VERIFY FLOW for login - Already exists but keeping your version
     public String verifyLoginOtp(String email, String otp) {
         otpService.verifyOtp(email, otp);
 
@@ -142,19 +140,21 @@ public class AuthService {
         return jwtService.generateToken(user.getEmail());
     }
 
-    public String resendOtp(String email) {
+    // Resend OTP method - Updated to match your requested method signature
+    public void resendOtp(String email) {
+        // Check if user exists
         userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "User not found"
                 ));
 
+        // Generate new OTP
         String otp = otpService.createOtp(email);
 
-        // ✅ CORRECT: Throw exception if email fails
+        // Send OTP email
         try {
             emailService.sendOtpEmail(email, otp);
-            return "OTP resent successfully.";
         } catch (Exception e) {
             System.err.println("❌ Resend OTP email failed for " + email + ": " + e.getMessage());
             throw new ResponseStatusException(
@@ -162,6 +162,16 @@ public class AuthService {
                     "Unable to send OTP email. Please try again."
             );
         }
+    }
+
+    // Keep existing methods for backward compatibility
+    public void verifyOtp(String email, String otp) {
+        verifySignupOtp(email, otp);
+    }
+
+    public String initiateLogin(String email, String password) {
+        login(email, password);
+        return "OTP sent to your email. Please verify to complete login.";
     }
 
     // Direct login for testing/development (if needed)
@@ -186,21 +196,10 @@ public class AuthService {
             );
         }
 
+        user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        String otp = otpService.createOtp(email);
-
-        // ✅ CORRECT: Throw exception if email fails
-        try {
-            emailService.sendOtpEmail(email, otp);
-            return "OTP sent to your email. Please verify to complete login.";
-        } catch (Exception e) {
-            System.err.println("❌ Direct login OTP email failed: " + e.getMessage());
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "Unable to send OTP email. Please try again."
-            );
-        }
+        return jwtService.generateToken(user.getEmail());
     }
 
     // ✅ Inner class for structured response

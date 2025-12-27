@@ -30,14 +30,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+
+        // ✅ YOUR REQUESTED FIX: Skip auth for /api/auth endpoints
+        if (request.getRequestURI().startsWith("/api/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
 
-        // Skip JWT validation for public endpoints
+        // Additional public endpoints check (backward compatibility)
         String requestPath = request.getServletPath();
-        if (requestPath.startsWith("/api/auth/") ||
-                requestPath.startsWith("/swagger-ui/") ||
+        if (requestPath.startsWith("/swagger-ui/") ||
                 requestPath.startsWith("/v3/api-docs/") ||
                 "/error".equals(requestPath) ||
                 "/health".equals(requestPath) ||
@@ -47,6 +53,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            // For protected endpoints without auth header
+            if (!isPublicEndpoint(requestPath)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Missing or invalid Authorization header");
+                return;
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -67,8 +79,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid or expired token");
+                return;
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/api/auth/") ||
+                path.startsWith("/swagger-ui/") ||
+                path.startsWith("/v3/api-docs/") ||
+                "/error".equals(path) ||
+                "/health".equals(path) ||
+                "/actuator/health".equals(path);
     }
 }

@@ -12,56 +12,41 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(
-        origins = {"https://cine-cool-tv.vercel.app", "http://localhost:3000"},
-        allowCredentials = "true"
-)
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
-
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
-        authService.signup(request.getEmail(), request.getPassword(), request.getName());
-        return ResponseEntity.ok(Map.of("message", "OTP sent to email"));
-    }
-
-    @PostMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@Valid @RequestBody OtpRequest request) {
-        authService.verifyOtp(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(Map.of("message", "Account verified successfully"));
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        String message = authService.initiateLogin(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(Map.of("message", message));
-    }
-
-    @PostMapping("/verify-login-otp")
-    public ResponseEntity<?> verifyLoginOtp(@Valid @RequestBody OtpRequest request) {
-        String token = authService.verifyLoginOtp(request.getEmail(), request.getOtp());
+    public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
+        authService.signup(req.getEmail(), req.getPassword(), req.getName());
         return ResponseEntity.ok(Map.of(
-                "message", "Login successful",
-                "token", token
+                "success", true,
+                "message", "OTP sent to your email"
         ));
     }
 
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestBody OtpVerificationRequest req) {
+        authService.verifySignupOtp(req.getEmail(), req.getOtp());
+        return ResponseEntity.ok(Map.of("status", "SUCCESS"));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
+        authService.login(req.getEmail(), req.getPassword());
+        return ResponseEntity.ok(Map.of("status", "OTP_REQUIRED"));
+    }
+
+    @PostMapping("/verify-login-otp")
+    public ResponseEntity<?> verifyLoginOtp(@RequestBody OtpVerificationRequest req) {
+        String token = authService.verifyLoginOtp(req.getEmail(), req.getOtp());
+        return ResponseEntity.ok(Map.of("token", token));
+    }
+
     @PostMapping("/resend-otp")
-    public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-
-        if (email == null || email.trim().isEmpty()) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(Map.of("error", "Email is required"));
-        }
-
-        authService.resendOtp(email);
-        return ResponseEntity.ok(Map.of("message", "OTP resent"));
+    public ResponseEntity<?> resendOtp(@RequestBody OtpRequest req) {
+        authService.resendOtp(req.getEmail());
+        return ResponseEntity.ok(Map.of("status", "SUCCESS"));
     }
 }

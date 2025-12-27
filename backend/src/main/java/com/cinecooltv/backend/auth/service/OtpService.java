@@ -7,6 +7,8 @@ import com.cinecooltv.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -28,7 +30,7 @@ public class OtpService {
         return String.valueOf(100000 + RANDOM.nextInt(900000));
     }
 
-    // ✅ FIX: Add this missing method
+    // ✅ Create OTP without sending email
     @Transactional
     public String createOtp(String email) {
         // Cleanup old OTPs for this email
@@ -46,55 +48,98 @@ public class OtpService {
                 .build();
 
         otpRepository.save(entity);
-        return otp; // ✅ Return OTP without sending email
+        return otp;
     }
 
-    // 📩 Create & send OTP (existing method)
+    // 📩 Create & send OTP
     @Transactional
     public void createAndSendOtp(String email) {
-        String otp = createOtp(email); // ✅ Reuse the new method
+        String otp = createOtp(email);
         emailService.sendOtpEmail(email, otp);
     }
 
-    // ✅ Verify OTP
+    // ✅ Send login OTP (separate from signup OTP if needed)
     @Transactional
-    public void verifyOtp(String email, String otp) {
-        OtpVerification otpRecord = otpRepository
-                .findTopByEmailOrderByExpiryDesc(email)
-                .orElseThrow(() -> new RuntimeException("OTP not found"));
-
-        if (otpRecord.getExpiry().isBefore(LocalDateTime.now())) {
-            otpRepository.delete(otpRecord);
-            throw new RuntimeException("OTP expired");
-        }
-
-        if (!otpRecord.getOtp().equals(otp)) {
-            int attempts = otpRecord.getAttempts() + 1;
-            otpRecord.setAttempts(attempts);
-
-            if (attempts >= MAX_ATTEMPTS) {
-                otpRepository.delete(otpRecord);
-                throw new RuntimeException("Too many failed attempts. Request a new OTP.");
-            }
-
-            otpRepository.save(otpRecord);
-            throw new RuntimeException("Invalid OTP");
-        }
-
-        // ✅ OTP verified
-        otpRepository.delete(otpRecord);
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setVerified(true);
-        user.setVerifiedAt(LocalDateTime.now());
-        userRepository.save(user);
+    public void sendLoginOtp(String email) {
+        String otp = createOtp(email);
+        emailService.sendOtpEmail(email, otp);
     }
 
-    // 🧹 Cleanup expired OTPs
+    // ✅ CRITICAL FIX: Verify OTP without auto-verifying user
+    @Transactional
+    public void verifyOtp(String email, String otp) {
+        OtpVerification record = otpRepository
+                .findTopByEmailOrderByExpiryDesc(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "OTP not found"
+                ));
+
+        // Check if OTP is already used
+        if (record.isUsed()) {
+            otpRepository.delete(record);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "OTP already used"
+            );
+        }
+
+        // Check if OTP is expired
+        if (record.getExpiry().isBefore(LocalDateTime.now())) {
+            otpRepository.delete(record);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "OTP expired"
+            );
+        }
+
+        // Check if OTP matches
+        if (!record.getOtp().equals(otp)) {
+            int attempts = record.getAttempts() + 1;
+            record.setAttempts(attempts);
+
+            if (attempts >= MAX_ATTEMPTS) {
+                otpRepository.delete(record);
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "Too many failed attempts. Request a new OTP."
+                );
+            }
+
+            otpRepository.save(record);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid OTP"
+            );
+        }
+
+        // ✅ OTP is valid - mark as used but DON'T delete immediately
+        record.setUsed(true);
+        otpRepository.save(record);
+
+        // ✅ CRITICAL: Do NOT auto-verify the user here
+        // User verification is now handled by AuthService in verifySignupOtp() or verifyLoginOtp()
+    }
+
+    // 🧹 Cleanup expired and used OTPs
     @Transactional
     public void cleanupExpiredOtps() {
+        // Delete expired OTPs
         otpRepository.deleteByExpiryBefore(LocalDateTime.now());
+
+        // Also cleanup used OTPs older than 1 hour
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        otpRepository.deleteByUsedTrueAndUpdatedAtBefore(oneHourAgo);
+    }
+
+    // 🔍 Check if OTP exists and is valid (without verifying)
+    public boolean isOtpValid(String email, String otp) {
+        return otpRepository.findTopByEmailOrderByExpiryDesc(email)
+                .map(record -> {
+                    if (record.isUsed()) return false;
+                    if (record.getExpiry().isBefore(LocalDateTime.now())) return false;
+                    return record.getOtp().equals(otp);
+                })
+                .orElse(false);
     }
 }
