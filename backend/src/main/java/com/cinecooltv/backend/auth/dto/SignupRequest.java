@@ -10,8 +10,8 @@ public class SignupRequest {
     @NotBlank
     private String name;
 
-    @NotBlank
     @Email
+    @NotBlank
     private String email;
 
     @NotBlank

@@ -1,3 +1,11 @@
+package com.cinecooltv.backend.auth.service;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
 @Service
 @Slf4j
 public class EmailService {
@@ -19,12 +27,11 @@ public class EmailService {
             message.setSubject("Your CineCoolTV OTP Code");
             message.setText(
                     "Your OTP code is: " + otp + "\n\n" +
-                            "This code will expire in 5 minutes.\n\n" +
-                            "If you did not request this, please ignore this email."
+                            "This code will expire in 5 minutes."
             );
 
             mailSender.send(message);
-            log.info("✅ OTP email sent successfully to {}", toEmail);
+            log.info("✅ OTP email sent to {}", toEmail);
 
         } catch (Exception e) {
             log.error("❌ OTP email failed for {}: {}", toEmail, e.getMessage());
