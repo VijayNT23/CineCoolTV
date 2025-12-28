@@ -49,9 +49,9 @@ const Signup = () => {
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/signup`,
           {
-            name: name,
-            email: email,
-            password: password
+            name: fullName,
+            email,
+            password
           },
           {
             headers: {
