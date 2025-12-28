@@ -9,6 +9,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,11 +33,17 @@ public class SecurityConfig {
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
+    // 🔐 ✅ THIS WAS MISSING — PASSWORD ENCODER BEAN
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // ✅ THIS FIXES CORS
+                // ✅ CORS (final fix)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .csrf(csrf -> csrf.disable())
@@ -49,13 +57,13 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ MUST allow OPTIONS (preflight)
+                        // ✅ Allow preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // ✅ Auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // ✅ Health check
+                        // ✅ Health
                         .requestMatchers("/actuator/health").permitAll()
 
                         // 🔐 Everything else needs JWT
@@ -71,7 +79,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✅ ONLY CORS CONFIG THAT MATTERS
+    // 🌐 CORS CONFIG USED BY SPRING SECURITY
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
