@@ -50,7 +50,7 @@ const Signup = () => {
       const response = await axios.post(
           `${API_BASE_URL}/api/auth/signup`,
           {
-            name:name,
+            name: name,
             email: email,
             password: password
           },
@@ -71,30 +71,24 @@ const Signup = () => {
     } catch (error) {
       console.error("Signup error details:", error);
 
+      // ✅ FIX #1 — Improved error handling
       if (error.response && error.response.data) {
-        setError(error.response.data.error || "Signup failed");
-      } else {
-        setError("Server not reachable");
-      }
-    }
-
-      const backendMsg = err.response?.data?.message;
-      const status = err.response?.status;
-
-      if (status === 400) {
-        setError(backendMsg || "Invalid request. Please check your information.");
-      } else if (status === 409) {
-        setError("Email already registered. Please login or use a different email.");
-      } else if (backendMsg) {
-        setError(backendMsg);
-      } else if (err.code === "ERR_NETWORK") {
+        // Check for different error response formats
+        if (error.response.data.error) {
+          setError(error.response.data.error || "Signup failed");
+        } else if (error.response.data.message) {
+          setError(error.response.data.message || "Signup failed");
+        } else if (typeof error.response.data === 'string') {
+          setError(error.response.data || "Signup failed");
+        } else {
+          setError("Signup failed. Please try again.");
+        }
+      } else if (error.code === "ERR_NETWORK") {
         setError("Network error. Please check your connection and try again.");
-      } else if (err.code === "ERR_BAD_REQUEST") {
-        setError("Server error. Please try again later.");
-      } else if (err.message?.includes("CORS")) {
+      } else if (error.message?.includes("CORS")) {
         setError("Connection issue. Please refresh the page or try again later.");
       } else {
-        setError("Registration failed. Please try again.");
+        setError("Server not reachable. Please try again later.");
       }
     } finally {
       setLoading(false);
@@ -113,9 +107,9 @@ const Signup = () => {
     }
 
     try {
-      // ✅ Use correct endpoint: /verify-email instead of /verify-otp
+      // ✅ Use correct endpoint: /verify-signup-otp instead of /verify-email
       const response = await axios.post(
-          `${API_BASE_URL}/api/auth/verify-email`,
+          `${API_BASE_URL}/api/auth/verify-signup-otp`,
           {
             email,
             otp,
@@ -128,7 +122,7 @@ const Signup = () => {
       );
 
       // ✅ Handle structured response
-      if (response.data.status === "SUCCESS") {
+      if (response.status === 200) {
         setMessage("Account verified successfully! Redirecting to login...");
 
         // Auto-redirect to login after 2 seconds
@@ -138,19 +132,23 @@ const Signup = () => {
       } else {
         setError(response.data.message || "OTP verification failed");
       }
-    } catch (err) {
-      const backendMsg = err.response?.data?.message;
-      const status = err.response?.status;
+    } catch (error) {
+      console.error("OTP verification error:", error);
 
-      if (status === 400) {
-        setError(backendMsg || "Invalid OTP. Please check and try again.");
-      } else if (status === 404) {
-        setError("User not found. Please sign up again.");
-      } else if (backendMsg) {
-        setError(backendMsg);
-      } else if (err.code === "ERR_NETWORK") {
+      // ✅ Improved error handling
+      if (error.response && error.response.data) {
+        if (error.response.data.error) {
+          setError(error.response.data.error);
+        } else if (error.response.data.message) {
+          setError(error.response.data.message);
+        } else if (typeof error.response.data === 'string') {
+          setError(error.response.data);
+        } else {
+          setError("OTP verification failed");
+        }
+      } else if (error.code === "ERR_NETWORK") {
         setError("Network error. Please check your connection.");
-      } else if (err.message?.includes("CORS")) {
+      } else if (error.message?.includes("CORS")) {
         setError("Connection issue. Please refresh the page and try again.");
       } else {
         setError("OTP verification failed. Please try again.");
@@ -177,17 +175,24 @@ const Signup = () => {
       );
 
       // ✅ Handle structured response
-      if (response.data.status === "SUCCESS") {
+      if (response.status === 200) {
         setMessage("New OTP sent to your email. Please check your inbox.");
       } else {
         setError(response.data.message || "Failed to resend OTP");
       }
-    } catch (err) {
-      const backendMsg = err.response?.data?.message;
+    } catch (error) {
+      console.error("Resend OTP error:", error);
 
-      if (backendMsg) {
-        setError(backendMsg);
-      } else if (err.code === "ERR_NETWORK") {
+      // ✅ Improved error handling
+      if (error.response && error.response.data) {
+        if (error.response.data.error) {
+          setError(error.response.data.error);
+        } else if (error.response.data.message) {
+          setError(error.response.data.message);
+        } else {
+          setError("Failed to resend OTP");
+        }
+      } else if (error.code === "ERR_NETWORK") {
         setError("Network error. Please check your connection.");
       } else {
         setError("Failed to resend OTP. Please try again.");
@@ -211,12 +216,12 @@ const Signup = () => {
 
           {message && (
               <div className={`rounded-lg p-4 ${
-                  message.includes("successfully")
+                  message.includes("successfully") || message.includes("sent")
                       ? "bg-green-900/30 border-green-800"
                       : "bg-blue-900/30 border-blue-800"
               }`}>
                 <div className="flex items-center">
-                  {message.includes("successfully") ? (
+                  {message.includes("successfully") || message.includes("sent") ? (
                       <svg className="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
@@ -226,7 +231,7 @@ const Signup = () => {
                       </svg>
                   )}
                   <p className={`text-sm font-medium ${
-                      message.includes("successfully") ? "text-green-300" : "text-blue-300"
+                      message.includes("successfully") || message.includes("sent") ? "text-green-300" : "text-blue-300"
                   }`}>
                     {message}
                   </p>
