@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -32,15 +33,43 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    // 🔧 Fix #1: Don't crash signup if email fails
+    // ✅ FIXED: OTP-friendly signup logic
     public SignupResult signup(String email, String password, String name) {
-        if (userRepository.findByEmail(email).isPresent()) {
+        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+
+            // If user exists but NOT verified → resend OTP
+            if (!existingUser.isVerified()) {
+                try {
+                    // Generate and send OTP
+                    String otp = otpService.createOtp(email);
+                    emailService.sendOtpEmail(email, otp);
+
+                    return new SignupResult(
+                            true,
+                            "OTP resent to your email. Please verify to complete registration.",
+                            true,
+                            SignupStatus.OTP_RESENT
+                    );
+                } catch (Exception e) {
+                    System.err.println("❌ OTP email failed for " + email + ": " + e.getMessage());
+                    throw new ResponseStatusException(
+                            HttpStatus.SERVICE_UNAVAILABLE,
+                            "Unable to send OTP email. Please try again."
+                    );
+                }
+            }
+
+            // If already verified → block signup
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Email already registered"
+                    "Email already registered and verified"
             );
         }
 
+        // ✅ Create new user only if NOT exists
         User user = new User();
         user.setEmail(email);
         user.setName(name);
@@ -69,10 +98,15 @@ public class AuthService {
             );
         }
 
-        return new SignupResult(true, message, emailSent);
+        return new SignupResult(
+                true,
+                message,
+                emailSent,
+                SignupStatus.OTP_SENT
+        );
     }
 
-    // 🔁 OTP VERIFY FLOW for email verification (signup) - NEW METHOD
+    // 🔁 OTP VERIFY FLOW for email verification (signup)
     public void verifySignupOtp(String email, String otp) {
         otpService.verifyOtp(email, otp);
 
@@ -87,7 +121,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    // 🔁 LOGIN FLOW - Updated to match your requested method signature
+    // 🔁 LOGIN FLOW
     public void login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -124,7 +158,7 @@ public class AuthService {
         }
     }
 
-    // 🔁 OTP VERIFY FLOW for login - Already exists but keeping your version
+    // 🔁 OTP VERIFY FLOW for login
     public String verifyLoginOtp(String email, String otp) {
         otpService.verifyOtp(email, otp);
 
@@ -140,7 +174,7 @@ public class AuthService {
         return jwtService.generateToken(user.getEmail());
     }
 
-    // Resend OTP method - Updated to match your requested method signature
+    // Resend OTP method
     public void resendOtp(String email) {
         // Check if user exists
         userRepository.findByEmail(email)
@@ -202,16 +236,23 @@ public class AuthService {
         return jwtService.generateToken(user.getEmail());
     }
 
-    // ✅ Inner class for structured response
+    // ✅ Enhanced SignupResult with status enum
     public static class SignupResult {
         private final boolean success;
         private final String message;
         private final boolean emailSent;
+        private final SignupStatus status;
 
-        public SignupResult(boolean success, String message, boolean emailSent) {
+        public SignupResult(boolean success, String message, boolean emailSent, SignupStatus status) {
             this.success = success;
             this.message = message;
             this.emailSent = emailSent;
+            this.status = status;
+        }
+
+        // Backward compatibility constructor
+        public SignupResult(boolean success, String message, boolean emailSent) {
+            this(success, message, emailSent, SignupStatus.OTP_SENT);
         }
 
         public boolean isSuccess() {
@@ -225,5 +266,16 @@ public class AuthService {
         public boolean isEmailSent() {
             return emailSent;
         }
+
+        public SignupStatus getStatus() {
+            return status;
+        }
+    }
+
+    // ✅ Status enum for signup results
+    public enum SignupStatus {
+        OTP_SENT,      // New user, OTP sent
+        OTP_RESENT,    // Existing unverified user, OTP resent
+        USER_EXISTS    // Existing verified user (error case)
     }
 }
