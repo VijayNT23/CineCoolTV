@@ -68,8 +68,15 @@ const Signup = () => {
       } else {
         setError(response.data.message || "Registration failed");
       }
-    } catch (err) {
-      console.error("Signup error details:", err);
+    } catch (error) {
+      console.error("Signup error details:", error);
+
+      if (error.response && error.response.data) {
+        setError(error.response.data.error || "Signup failed");
+      } else {
+        setError("Server not reachable");
+      }
+    }
 
       const backendMsg = err.response?.data?.message;
       const status = err.response?.status;
