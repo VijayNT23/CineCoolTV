@@ -1,18 +1,24 @@
 package com.cinecooltv.backend.auth.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private static final String BREVO_API_URL =
+            "https://api.brevo.com/v3/smtp/email";
+
+    @Value("${BREVO_API_KEY}")
+    private String apiKey;
 
     @Value("${BREVO_SENDER_EMAIL}")
     private String senderEmail;
@@ -20,20 +26,51 @@ public class EmailService {
     @Value("${BREVO_SENDER_NAME}")
     private String senderName;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
     public void sendOtpEmail(String toEmail, String otp) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(senderName + " <" + senderEmail + ">");
-            message.setTo(toEmail);
-            message.setSubject("Your CineCoolTV OTP Code");
-            message.setText(
-                    "Your OTP Code: " + otp + "\n\n" +
-                            "This OTP expires in 5 minutes.\n\n" +
-                            "If you did not request this, ignore this email."
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("sender", Map.of(
+                    "email", senderEmail,
+                    "name", senderName
+            ));
+
+            payload.put("to", List.of(
+                    Map.of("email", toEmail)
+            ));
+
+            payload.put("subject", "Your CineCoolTV OTP Code");
+
+            payload.put("htmlContent",
+                    "<h2>CineCoolTV OTP Verification</h2>" +
+                            "<p>Your OTP is:</p>" +
+                            "<h1>" + otp + "</h1>" +
+                            "<p>This OTP will expire in <b>5 minutes</b>.</p>" +
+                            "<br/>" +
+                            "<p>If you did not request this, please ignore this email.</p>"
             );
 
-            mailSender.send(message);
-            log.info("✅ OTP email sent to {}", toEmail);
+            HttpEntity<Map<String, Object>> entity =
+                    new HttpEntity<>(payload, headers);
+
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(
+                            BREVO_API_URL,
+                            entity,
+                            String.class
+                    );
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.error("❌ Brevo API error: {}", response.getBody());
+                throw new RuntimeException("Brevo email API failed");
+            }
+
+            log.info("✅ OTP email sent via Brevo API to {}", toEmail);
 
         } catch (Exception e) {
             log.error("❌ Failed to send OTP email to {}: {}", toEmail, e.getMessage());
