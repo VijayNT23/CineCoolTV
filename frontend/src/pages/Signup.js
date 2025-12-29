@@ -61,7 +61,7 @@ const Signup = () => {
       );
 
       // ✅ Handle response and navigate to OTP screen
-      if (response.data.success) {
+        if (response.status === 200 || response.status === 201) {
         // Show success message briefly
         setMessage("Account created successfully! Redirecting to OTP verification...");
 
